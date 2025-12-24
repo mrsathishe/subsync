@@ -34,6 +34,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/subscriptions', require('./src/routes/subscriptions'));
 app.use('/api/users', require('./src/routes/users'));
+app.use('/api/ott', require('./src/routes/ottDetails'));
+app.use('/api/admin/subscriptions', require('./src/routes/adminSubscriptions'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
