@@ -1,186 +1,145 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile, useUpdateProfile } from '../hooks/useApi';
-import styled from 'styled-components';
 
-const PageContainer = styled.div`
-  max-width: 800px;
-  margin: 0 auto;
-`;
+const PageContainer = ({ children }) => (
+  <div className="max-w-3xl mx-auto">
+    {children}
+  </div>
+);
 
-const PageHeader = styled.div`
-  margin-bottom: ${props => props.theme.spacing.xl};
-`;
+const PageHeader = ({ children }) => (
+  <div className="mb-8">
+    {children}
+  </div>
+);
 
-const PageTitle = styled.h1`
-  font-size: 2rem;
-  font-weight: bold;
-  color: ${props => props.theme.colors.gray[900]};
-  margin-bottom: ${props => props.theme.spacing.xs};
-`;
+const PageTitle = ({ children }) => (
+  <h1 className="text-3xl font-bold text-gray-900 mb-1">
+    {children}
+  </h1>
+);
 
-const PageSubtitle = styled.p`
-  color: ${props => props.theme.colors.gray[600]};
-  font-size: 1.125rem;
-`;
+const PageSubtitle = ({ children }) => (
+  <p className="text-gray-600 text-lg">
+    {children}
+  </p>
+);
 
-const Card = styled.div`
-  background: white;
-  border-radius: ${props => props.theme.borderRadius.lg};
-  box-shadow: ${props => props.theme.shadows.sm};
-  border: 1px solid ${props => props.theme.colors.gray[200]};
-  overflow: hidden;
-`;
+const Card = ({ children, className = '' }) => (
+  <div className={`bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden ${className}`}>
+    {children}
+  </div>
+);
 
-const CardHeader = styled.div`
-  padding: ${props => props.theme.spacing.lg};
-  border-bottom: 1px solid ${props => props.theme.colors.gray[200]};
-`;
+const CardHeader = ({ children }) => (
+  <div className="p-6 border-b border-gray-200">
+    {children}
+  </div>
+);
 
-const CardTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: ${props => props.theme.colors.gray[900]};
-  margin: 0;
-`;
+const CardTitle = ({ children }) => (
+  <h2 className="text-xl font-semibold text-gray-900 m-0">
+    {children}
+  </h2>
+);
 
-const CardContent = styled.div`
-  padding: ${props => props.theme.spacing.lg};
-`;
+const CardContent = ({ children }) => (
+  <div className="p-6">
+    {children}
+  </div>
+);
 
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: ${props => props.theme.spacing.lg};
-`;
+const Form = ({ children, onSubmit }) => (
+  <form className="flex flex-col gap-6" onSubmit={onSubmit}>
+    {children}
+  </form>
+);
 
-const FormRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: ${props => props.theme.spacing.md};
+const FormRow = ({ children }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {children}
+  </div>
+);
 
-  @media (max-width: ${props => props.theme.breakpoints.md}) {
-    grid-template-columns: 1fr;
-  }
-`;
+const InputGroup = ({ children }) => (
+  <div className="flex flex-col">
+    {children}
+  </div>
+);
 
-const InputGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
+const Label = ({ children, htmlFor }) => (
+  <label htmlFor={htmlFor} className="text-sm font-semibold text-gray-700 mb-2">
+    {children}
+  </label>
+);
 
-const Label = styled.label`
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: ${props => props.theme.colors.gray[700]};
-  margin-bottom: 0.5rem;
-`;
+const Input = (props) => (
+  <input
+    {...props}
+    className="p-3 border border-gray-300 rounded-md text-base transition-all focus:outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100 invalid:border-red-500 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+  />
+);
 
-const Input = styled.input`
-  padding: ${props => props.theme.spacing.sm};
-  border: 1px solid ${props => props.theme.colors.gray[300]};
-  border-radius: ${props => props.theme.borderRadius.md};
-  font-size: 1rem;
-  transition: all 0.2s;
+const ButtonGroup = ({ children }) => (
+  <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+    {children}
+  </div>
+);
 
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 3px ${props => props.theme.colors.primary}20;
-  }
+const Button = ({ children, variant, disabled, ...props }) => {
+  const baseClasses = "px-6 py-3 rounded-md text-sm font-semibold transition-all focus:ring-2 focus:ring-brand-100";
+  const primaryClasses = disabled 
+    ? "bg-gray-400 text-white cursor-not-allowed" 
+    : "bg-brand-600 text-white hover:bg-brand-700 cursor-pointer";
+  const secondaryClasses = disabled 
+    ? "border border-gray-300 bg-white text-gray-400 cursor-not-allowed" 
+    : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 cursor-pointer";
+  
+  const classes = `${baseClasses} ${variant === 'secondary' ? secondaryClasses : primaryClasses}`;
+  
+  return (
+    <button {...props} disabled={disabled} className={classes}>
+      {children}
+    </button>
+  );
+};
 
-  &:invalid {
-    border-color: ${props => props.theme.colors.danger};
-  }
+const SuccessMessage = ({ children }) => (
+  <div className="bg-green-50 text-green-700 p-3 rounded-md border border-green-200 text-sm mb-4">
+    {children}
+  </div>
+);
 
-  &:disabled {
-    background-color: ${props => props.theme.colors.gray[100]};
-    color: ${props => props.theme.colors.gray[500]};
-    cursor: not-allowed;
-  }
-`;
+const ErrorMessage = ({ children }) => (
+  <div className="bg-red-50 text-red-700 p-3 rounded-md border border-red-200 text-sm mb-4">
+    {children}
+  </div>
+);
 
-const ButtonGroup = styled.div`
-  display: flex;
-  gap: ${props => props.theme.spacing.sm};
-  justify-content: flex-end;
-  padding-top: ${props => props.theme.spacing.md};
-  border-top: 1px solid ${props => props.theme.colors.gray[200]};
-`;
+const LoadingState = ({ children }) => (
+  <div className="flex items-center justify-center p-8 text-gray-500">
+    {children}
+  </div>
+);
 
-const Button = styled.button`
-  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.lg};
-  border: ${props => props.variant === 'secondary' ? `1px solid ${props.theme.colors.gray[300]}` : 'none'};
-  background: ${props => {
-    if (props.disabled) return props.theme.colors.gray[400];
-    if (props.variant === 'secondary') return 'white';
-    return props.theme.colors.primary;
-  }};
-  color: ${props => {
-    if (props.disabled) return 'white';
-    if (props.variant === 'secondary') return props.theme.colors.gray[700];
-    return 'white';
-  }};
-  border-radius: ${props => props.theme.borderRadius.md};
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  transition: all 0.2s;
+const InfoSection = ({ children }) => (
+  <div className="bg-gray-50 p-4 rounded-md mb-6">
+    {children}
+  </div>
+);
 
-  &:hover:not(:disabled) {
-    background: ${props => {
-      if (props.variant === 'secondary') return props.theme.colors.gray[50];
-      return props.theme.colors.primaryHover;
-    }};
-  }
-`;
+const InfoLabel = ({ children }) => (
+  <span className="text-sm font-semibold text-gray-700">
+    {children}
+  </span>
+);
 
-const SuccessMessage = styled.div`
-  background: ${props => props.theme.colors.success}10;
-  color: ${props => props.theme.colors.success};
-  padding: ${props => props.theme.spacing.sm};
-  border-radius: ${props => props.theme.borderRadius.md};
-  border: 1px solid ${props => props.theme.colors.success}30;
-  font-size: 0.875rem;
-  margin-bottom: ${props => props.theme.spacing.md};
-`;
-
-const ErrorMessage = styled.div`
-  background: ${props => props.theme.colors.danger}10;
-  color: ${props => props.theme.colors.danger};
-  padding: ${props => props.theme.spacing.sm};
-  border-radius: ${props => props.theme.borderRadius.md};
-  border: 1px solid ${props => props.theme.colors.danger}30;
-  font-size: 0.875rem;
-  margin-bottom: ${props => props.theme.spacing.md};
-`;
-
-const LoadingState = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: ${props => props.theme.spacing.xl};
-  color: ${props => props.theme.colors.gray[500]};
-`;
-
-const InfoSection = styled.div`
-  background: ${props => props.theme.colors.gray[50]};
-  padding: ${props => props.theme.spacing.md};
-  border-radius: ${props => props.theme.borderRadius.md};
-  margin-bottom: ${props => props.theme.spacing.lg};
-`;
-
-const InfoLabel = styled.span`
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: ${props => props.theme.colors.gray[700]};
-`;
-
-const InfoValue = styled.span`
-  font-size: 0.875rem;
-  color: ${props => props.theme.colors.gray[900]};
-  margin-left: ${props => props.theme.spacing.sm};
-`;
+const InfoValue = ({ children }) => (
+  <span className="text-sm text-gray-900 ml-3">
+    {children}
+  </span>
+);
 
 function ProfilePage() {
   const { user } = useAuth();
@@ -280,7 +239,7 @@ function ProfilePage() {
         <CardContent>
           {profile && (
             <InfoSection>
-              <div style={{ marginBottom: '0.5rem' }}>
+              <div className="mb-2">
                 <InfoLabel>Member since:</InfoLabel>
                 <InfoValue>{formatDate(profile.created_at)}</InfoValue>
               </div>
@@ -367,18 +326,13 @@ function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Card style={{ marginTop: '2rem' }}>
+      <Card className="mt-8">
         <CardHeader>
           <CardTitle>Account Security</CardTitle>
         </CardHeader>
         <CardContent>
           <InfoSection>
-            <p style={{ 
-              color: '#6b7280', 
-              margin: 0,
-              fontSize: '0.875rem',
-              lineHeight: '1.5'
-            }}>
+            <p className="text-gray-500 m-0 text-sm leading-6">
               To change your password or update security settings, please contact our support team. 
               We take account security seriously and require additional verification for these changes.
             </p>

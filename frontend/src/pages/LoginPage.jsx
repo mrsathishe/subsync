@@ -1,119 +1,86 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import styled from 'styled-components';
 
-const PageContainer = styled.div`
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, ${props => props.theme.colors.primary} 0%, ${props => props.theme.colors.primaryHover} 100%);
-  padding: ${props => props.theme.spacing.lg};
-`;
+// Tailwind CSS Components
+const PageContainer = ({ children }) => (
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-700 p-6">
+    {children}
+  </div>
+);
 
-const LoginCard = styled.div`
-  background: white;
-  padding: ${props => props.theme.spacing.xl};
-  border-radius: ${props => props.theme.borderRadius.lg};
-  box-shadow: ${props => props.theme.shadows.lg};
-  width: 100%;
-  max-width: 400px;
-`;
+const LoginCard = ({ children }) => (
+  <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+    {children}
+  </div>
+);
 
-const Logo = styled.h1`
-  text-align: center;
-  font-size: 2rem;
-  font-weight: bold;
-  color: ${props => props.theme.colors.primary};
-  margin-bottom: ${props => props.theme.spacing.lg};
-`;
+const Logo = ({ children }) => (
+  <h1 className="text-center text-3xl font-bold text-brand-600 mb-6">
+    {children}
+  </h1>
+);
 
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: ${props => props.theme.spacing.md};
-`;
+const Form = ({ children, ...props }) => (
+  <form className="flex flex-col gap-4" {...props}>
+    {children}
+  </form>
+);
 
-const InputGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
+const InputGroup = ({ children }) => (
+  <div className="flex flex-col">
+    {children}
+  </div>
+);
 
-const Label = styled.label`
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: ${props => props.theme.colors.gray[700]};
-  margin-bottom: 0.5rem;
-`;
+const Label = ({ children, ...props }) => (
+  <label className="text-sm font-semibold text-gray-700 mb-2" {...props}>
+    {children}
+  </label>
+);
 
-const Input = styled.input`
-  padding: ${props => props.theme.spacing.sm};
-  border: 1px solid ${props => props.theme.colors.gray[300]};
-  border-radius: ${props => props.theme.borderRadius.md};
-  font-size: 1rem;
-  transition: all 0.2s;
+const Input = ({ ...props }) => (
+  <input 
+    className="p-3 border border-gray-300 rounded-md text-base transition-all focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 invalid:border-red-500"
+    {...props}
+  />
+);
 
-  &:focus {
-    outline: none;
-    border-color: ${props => props.theme.colors.primary};
-    box-shadow: 0 0 0 3px ${props => props.theme.colors.primary}20;
-  }
+const Button = ({ children, disabled, ...props }) => (
+  <button 
+    className={`p-3 rounded-md text-base font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400 ${
+      disabled 
+        ? 'bg-gray-400 text-white cursor-not-allowed' 
+        : 'bg-brand-600 text-white cursor-pointer hover:bg-brand-700'
+    }`}
+    disabled={disabled}
+    {...props}
+  >
+    {children}
+  </button>
+);
 
-  &:invalid {
-    border-color: ${props => props.theme.colors.danger};
-  }
-`;
+const ErrorMessage = ({ children }) => (
+  <div className="bg-red-50 text-red-600 p-3 rounded-md border border-red-200 text-sm mb-4">
+    {children}
+  </div>
+);
 
-const Button = styled.button`
-  padding: ${props => props.theme.spacing.sm} ${props => props.theme.spacing.md};
-  background: ${props => props.disabled ? props.theme.colors.gray[400] : props.theme.colors.primary};
-  color: white;
-  border: none;
-  border-radius: ${props => props.theme.borderRadius.md};
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  transition: background-color 0.2s;
+const LinkContainer = ({ children }) => (
+  <div className="text-center mt-4">
+    {children}
+  </div>
+);
 
-  &:hover:not(:disabled) {
-    background: ${props => props.theme.colors.primaryHover};
-  }
-
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px ${props => props.theme.colors.primary}40;
-  }
-`;
-
-const ErrorMessage = styled.div`
-  background: ${props => props.theme.colors.danger}10;
-  color: ${props => props.theme.colors.danger};
-  padding: ${props => props.theme.spacing.sm};
-  border-radius: ${props => props.theme.borderRadius.md};
-  border: 1px solid ${props => props.theme.colors.danger}30;
-  font-size: 0.875rem;
-  margin-bottom: ${props => props.theme.spacing.md};
-`;
-
-const LinkContainer = styled.div`
-  text-align: center;
-  margin-top: ${props => props.theme.spacing.md};
-`;
-
-const StyledLink = styled(Link)`
-  color: ${props => props.theme.colors.primary};
-  text-decoration: none;
-  font-size: 0.875rem;
-
-  &:hover {
-    text-decoration: underline;
-  }
-`;
+const StyledLink = ({ children, ...props }) => (
+  <Link className="text-brand-600 no-underline text-sm hover:underline" {...props}>
+    {children}
+  </Link>
+);
 
 function LoginPage() {
   const [formData, setFormData] = useState({
-    email: '',
+    emailOrPhone: '',
     password: '',
   });
   const [error, setError] = useState('');
@@ -132,18 +99,21 @@ function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     setIsLoading(true);
     setError('');
 
     try {
-      const result = await login(formData.email, formData.password);
+      const result = await login(formData.emailOrPhone, formData.password);
       if (result.success) {
         navigate('/dashboard');
       } else {
-        setError(result.error);
+        setError(result.error || 'Login failed. Please check your credentials.');
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      console.error('Login error:', err);
+      setError(err.response?.data?.error || 'An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -156,17 +126,17 @@ function LoginPage() {
         
         {error && <ErrorMessage>{error}</ErrorMessage>}
         
-        <Form onSubmit={handleSubmit}>
+        <Form onSubmit={handleSubmit} noValidate>
           <InputGroup>
-            <Label htmlFor="email">Email Address</Label>
+            <Label htmlFor="emailOrPhone">Email or Phone Number</Label>
             <Input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
+              id="emailOrPhone"
+              name="emailOrPhone"
+              type="text"
+              value={formData.emailOrPhone}
               onChange={handleChange}
               required
-              placeholder="Enter your email"
+              placeholder="Enter your email or phone number"
             />
           </InputGroup>
 
@@ -183,7 +153,7 @@ function LoginPage() {
             />
           </InputGroup>
 
-          <Button type="submit" disabled={isLoading}>
+          <Button type="submit" disabled={isLoading || !formData.emailOrPhone.trim() || !formData.password.trim()}>
             {isLoading ? 'Signing In...' : 'Sign In'}
           </Button>
         </Form>

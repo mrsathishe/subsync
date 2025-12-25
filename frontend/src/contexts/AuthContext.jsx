@@ -28,9 +28,15 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (email, password) => {
+  const login = async (emailOrPhone, password) => {
     try {
-      const response = await authAPI.login({ email, password });
+      // Determine if it's email or phone
+      const isEmail = emailOrPhone.includes('@');
+      const loginData = isEmail 
+        ? { email: emailOrPhone, password }
+        : { phone: emailOrPhone, password };
+        
+      const response = await authAPI.login(loginData);
       const { user: userData, token } = response;
       
       localStorage.setItem('authToken', token);
