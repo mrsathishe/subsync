@@ -3,7 +3,11 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
+
+// Load environment file based on ENV_FILE variable or default to .env
+const envFile = process.env.ENV_FILE || '.env';
+require('dotenv').config({ path: envFile });
+console.log(`🔧 Using environment file: ${envFile}`);
 
 const db = require('./src/config/database');
 
@@ -35,6 +39,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', require('./src/routes/auth'));
 app.use('/api/subscriptions', require('./src/routes/subscriptions'));
+app.use('/api/subscriptions', require('./src/routes/adminSubscriptions'));
 app.use('/api/users', require('./src/routes/users'));
 app.use('/api/ott', require('./src/routes/ottDetails'));
 app.use('/api/admin/subscriptions', require('./src/routes/adminSubscriptions'));

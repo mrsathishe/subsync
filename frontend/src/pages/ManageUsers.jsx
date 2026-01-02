@@ -8,7 +8,7 @@ import {
   PageContainer, 
   Card,
   CardContent
-} from './styles/adminUsers.styles';
+} from './styles/adminUsers.styles.jsx';
 
 function ManageUsers() {
   const { user } = useAuth();

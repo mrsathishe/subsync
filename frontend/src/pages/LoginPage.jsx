@@ -107,7 +107,7 @@ function LoginPage() {
     try {
       const result = await login(formData.emailOrPhone, formData.password);
       if (result.success) {
-        navigate('/dashboard');
+        navigate('/subscriptions');
       } else {
         setError(result.error || 'Login failed. Please check your credentials.');
       }

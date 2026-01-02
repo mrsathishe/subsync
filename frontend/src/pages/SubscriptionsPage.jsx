@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { useAdminSubscriptions, useDeleteAdminSubscription, useAdminDashboard } from '../hooks/useApi';
+import { useAdminSubscriptions, useDeleteAdminSubscription } from '../hooks/useApi';
 import { useAuth } from '../contexts/AuthContext';
-import AdminSubscriptionForm from '../components/AdminSubscriptionForm';
+import CreateSubscriptionForm from '../components/CreateSubscriptionForm';
 import AdminSubscriptionDetails from '../components/AdminSubscriptionDetails';
 import SubscriptionsPageHeader from '../components/subscription/PageHeader';
 import StatsSection from '../components/subscription/StatsSection';
@@ -36,7 +36,6 @@ function SubscriptionsPage() {
     Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== ''))
   );
   
-  const { data: dashboardData } = useAdminDashboard();
   const deleteSubscriptionMutation = useDeleteAdminSubscription();
 
   const categoryIcons = {
@@ -80,7 +79,7 @@ function SubscriptionsPage() {
   };
 
   // Get data objects from helper functions
-  const statsCards = getSubscriptionStatsCards(dashboardData, formatCurrency);
+  const statsCards = getSubscriptionStatsCards(null, formatCurrency);
   const filterConfig = getSubscriptionFilters();
   const tableConfig = getSubscriptionTableConfig(formatCurrency, formatDate, categoryIcons, handleView, handleEdit, handleDelete);
 
@@ -163,7 +162,7 @@ function SubscriptionsPage() {
       />
 
       <StatsSection 
-        dashboardData={dashboardData}
+        dashboardData={null}
         statsCards={statsCards}
       />
 
@@ -187,7 +186,7 @@ function SubscriptionsPage() {
       />
 
       {/* Modals */}
-      <AdminSubscriptionForm
+      <CreateSubscriptionForm
         isOpen={showCreateForm || !!editingSubscription}
         onClose={() => {
           setShowCreateForm(false);

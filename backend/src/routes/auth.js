@@ -114,4 +114,70 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Verify user identity for password reset
+router.post('/verify-user', async (req, res) => {
+  try {
+    const { email, phone, dateOfBirth } = req.body;
+
+    if (!email || !phone || !dateOfBirth) {
+      return res.status(400).json({ error: 'Email, phone, and date of birth are required' });
+    }
+
+    // Find user with matching email, phone, and date of birth
+    const result = await db.query(
+      'SELECT id FROM users WHERE email = $1 AND phone = $2 AND date_of_birth = $3 AND is_active = true',
+      [email, phone, dateOfBirth]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No user found with the provided details' });
+    }
+
+    res.json({ message: 'User verified successfully' });
+  } catch (error) {
+    console.error('User verification error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Reset password after verification
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, phone, dateOfBirth, newPassword } = req.body;
+
+    if (!email || !phone || !dateOfBirth || !newPassword) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    }
+
+    // Verify user again
+    const userResult = await db.query(
+      'SELECT id FROM users WHERE email = $1 AND phone = $2 AND date_of_birth = $3 AND is_active = true',
+      [email, phone, dateOfBirth]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User verification failed' });
+    }
+
+    // Hash new password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password
+    await db.query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2 AND phone = $3 AND date_of_birth = $4',
+      [passwordHash, email, phone, dateOfBirth]
+    );
+
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;

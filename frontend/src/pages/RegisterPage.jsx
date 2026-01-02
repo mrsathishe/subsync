@@ -141,7 +141,7 @@ function RegisterPage() {
       const result = await register(registrationData);
       
       if (result.success) {
-        navigate('/dashboard');
+        navigate('/subscriptions');
       } else {
         setError(result.error);
       }

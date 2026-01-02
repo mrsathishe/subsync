@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getUserTableConfig } from '../../utils/adminHelpers';
 import { useUpdateUserRole, useUpdateUserStatus } from '../../hooks/useApi';
-import AlertNotification from '../AlertNotification';
 import {
   TableContainer,
   Table,
@@ -14,7 +13,7 @@ import {
   DropdownButton,
   DropdownMenu,
   DropdownItem
-} from '../../pages/styles/adminUsers.styles';
+} from '../../pages/styles/adminUsers.styles.jsx';
 
 const UserTable = ({ usersData, isLoading }) => {
   const [openDropdowns, setOpenDropdowns] = useState({});
@@ -168,13 +167,22 @@ const UserTable = ({ usersData, isLoading }) => {
   return (
     <>
       {notification && (
-        <div style={{ marginBottom: '1rem' }}>
-          <AlertNotification
-            variant={notification.variant}
-            icon={notification.icon}
-            title={notification.title}
-            content={notification.content}
-          />
+        <div style={{ 
+          marginBottom: '1rem', 
+          padding: '0.75rem 1rem', 
+          borderRadius: '0.5rem', 
+          backgroundColor: notification.variant === 'success' ? '#dcfce7' : '#fef2f2',
+          color: notification.variant === 'success' ? '#166534' : '#dc2626',
+          border: `1px solid ${notification.variant === 'success' ? '#bbf7d0' : '#fecaca'}`,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          <span>{notification.icon}</span>
+          <div>
+            <strong>{notification.title}</strong>
+            {notification.content && <div>{notification.content}</div>}
+          </div>
         </div>
       )}
       

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Section, SectionTitle, InputRow, InputGroup, Label, Input, Select } from '../styles';
+import { Section, SectionTitle, InputRow, InputGroup, Label, Input, Select } from '../styles.jsx';
 
 const BasicInformation = ({ formData, errors, onChange }) => {
   return (

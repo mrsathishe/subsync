@@ -5,7 +5,7 @@ import {
   PaginationControls,
   PaginationButton,
   PageNumber
-} from '../../pages/styles/adminUsers.styles';
+} from '../../pages/styles/adminUsers.styles.jsx';
 
 const UserPagination = ({ 
   currentPage, 

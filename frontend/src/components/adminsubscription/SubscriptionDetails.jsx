@@ -1,5 +1,5 @@
 import React from 'react';
-import { Section, SectionTitle, InputRow, InputGroup, Label, Input, Select, CheckboxContainer, Checkbox } from '../styles';
+import { Section, SectionTitle, InputRow, InputGroup, Label, Input, Select, CheckboxContainer, Checkbox } from '../styles.jsx';
 
 const SubscriptionDetails = ({ formData, errors, onChange }) => {
   return (
@@ -127,19 +127,21 @@ const SubscriptionDetails = ({ formData, errors, onChange }) => {
           {errors.purchasedVia && <div style={{ color: '#ef4444', fontSize: '0.75rem' }}>{errors.purchasedVia}</div>}
         </InputGroup>
 
-        <InputGroup>
-          <Label>&nbsp;</Label> {/* Empty label for alignment */}
-          <CheckboxContainer>
-            <Checkbox
-              id="autoPay"
-              name="autoPay"
-              type="checkbox"
-              checked={formData.autoPay}
-              onChange={onChange}
-            />
-            <Label htmlFor="autoPay">Auto Pay Enabled</Label>
-          </CheckboxContainer>
-        </InputGroup>
+        {['GPay', 'Credit Card', 'UPI'].includes(formData.purchasedVia) && (
+          <InputGroup>
+            <Label>&nbsp;</Label> {/* Empty label for alignment */}
+            <CheckboxContainer>
+              <Checkbox
+                id="autoPay"
+                name="autoPay"
+                type="checkbox"
+                checked={formData.autoPay}
+                onChange={onChange}
+              />
+              <Label htmlFor="autoPay">Auto Pay Enabled</Label>
+            </CheckboxContainer>
+          </InputGroup>
+        )}
       </InputRow>
     </Section>
   );

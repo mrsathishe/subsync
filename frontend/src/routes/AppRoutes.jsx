@@ -22,7 +22,7 @@ export const PublicRoute = ({ children }) => {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  return isAuthenticated ? <Navigate to="/dashboard" /> : children;
+  return isAuthenticated ? <Navigate to="/subscriptions" /> : children;
 };
 
 export function AppContent() {
@@ -53,7 +53,7 @@ export function AppContent() {
             <LayoutComponent />
           </ProtectedRoute>
         }>
-          <Route index element={<Navigate to="/dashboard" />} />
+          <Route index element={<Navigate to="/subscriptions" />} />
           {routesConfig.protected.children.map((route) => {
             const Component = route.component;
             return (
@@ -67,7 +67,7 @@ export function AppContent() {
         </Route>
 
         {/* Catch all route */}
-        <Route path="*" element={<Navigate to="/dashboard" />} />
+        <Route path="*" element={<Navigate to="/subscriptions" />} />
       </Routes>
     </div>
   );

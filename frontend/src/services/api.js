@@ -112,12 +112,6 @@ export const adminAPI = {
     return response.data;
   },
 
-  // User search
-  searchUsers: async (query) => {
-    const response = await apiClient.get(`/api/users/search?q=${encodeURIComponent(query)}`);
-    return response.data;
-  },
-  
   // Subscription plan management
   getAllPlans: async () => {
     const response = await apiClient.get('/api/subscriptions/admin/plans');
@@ -153,37 +147,33 @@ export const adminAPI = {
       limit: limit.toString(),
       ...filters
     });
-    const response = await apiClient.get(`/api/admin/subscriptions/subscriptions?${params}`);
+    const response = await apiClient.get(`/api/subscriptions?${params}`);
     return response.data;
   },
 
   getAdminSubscription: async (id) => {
-    const response = await apiClient.get(`/api/admin/subscriptions/subscriptions/${id}`);
+    const response = await apiClient.get(`/api/subscriptions/${id}`);
     return response.data;
   },
 
-  createAdminSubscription: async (subscriptionData) => {
-    const response = await apiClient.post('/api/admin/subscriptions/subscriptions', subscriptionData);
+  createSubscription: async (subscriptionData) => {
+    const response = await apiClient.post('/api/subscriptions', subscriptionData);
     return response.data;
   },
 
   updateAdminSubscription: async (id, subscriptionData) => {
-    const response = await apiClient.put(`/api/admin/subscriptions/subscriptions/${id}`, subscriptionData);
+    // Include the ID in the request body for update operations
+    const response = await apiClient.post('/api/subscriptions', { ...subscriptionData, id });
     return response.data;
   },
 
   deleteAdminSubscription: async (id) => {
-    const response = await apiClient.delete(`/api/admin/subscriptions/subscriptions/${id}`);
+    const response = await apiClient.delete(`/api/subscriptions/${id}`);
     return response.data;
   },
 
   updateSubscriptionSharing: async (id, sharingDetails) => {
-    const response = await apiClient.put(`/api/admin/subscriptions/subscriptions/${id}/sharing`, { sharingDetails });
-    return response.data;
-  },
-
-  getAdminDashboard: async () => {
-    const response = await apiClient.get('/api/admin/subscriptions/dashboard');
+    const response = await apiClient.put(`/api/subscriptions/${id}/sharing`, { sharingDetails });
     return response.data;
   },
 };

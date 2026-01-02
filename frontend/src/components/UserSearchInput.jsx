@@ -1,12 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { adminAPI } from '../services/api';
 
-const UserSearchInput = ({ selectedUsers, onUsersChange, placeholder = "Search users..." }) => {
+const UserSearchInput = ({ selectedUsers, onUsersChange, placeholder = "Search users...", usersData }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -22,25 +20,25 @@ const UserSearchInput = ({ selectedUsers, onUsersChange, placeholder = "Search u
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSearch = async (query) => {
+  const handleSearch = (query) => {
     if (!query.trim()) {
       setSearchResults([]);
       setShowDropdown(false);
       return;
     }
 
-    setIsSearching(true);
-    try {
-      const result = await adminAPI.searchUsers(query);
-      setSearchResults(result.users || []);
-      setShowDropdown(true);
-    } catch (error) {
-      console.error('Error searching users:', error);
-      setSearchResults([]);
-      setShowDropdown(false);
-    } finally {
-      setIsSearching(false);
-    }
+    // Perform local search on users data
+    const availableUsers = usersData?.users || [];
+    const filteredUsers = availableUsers.filter(user => {
+      const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+      const email = user.email.toLowerCase();
+      const searchTerm = query.toLowerCase();
+      
+      return fullName.includes(searchTerm) || email.includes(searchTerm);
+    });
+
+    setSearchResults(filteredUsers);
+    setShowDropdown(true);
   };
 
   const handleInputChange = (e) => {
@@ -48,12 +46,8 @@ const UserSearchInput = ({ selectedUsers, onUsersChange, placeholder = "Search u
     setInputValue(value);
     setSearchQuery(value);
     
-    // Debounce search
-    const timeoutId = setTimeout(() => {
-      handleSearch(value);
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
+    // Perform immediate search (no need for debouncing since it's local)
+    handleSearch(value);
   };
 
   const handleKeyPress = (e) => {
@@ -162,13 +156,7 @@ const UserSearchInput = ({ selectedUsers, onUsersChange, placeholder = "Search u
           ref={dropdownRef}
           className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
         >
-          {isSearching && (
-            <div className="p-4 text-center text-gray-500">
-              Searching...
-            </div>
-          )}
-          
-          {!isSearching && searchResults.length === 0 && searchQuery.trim() && (
+          {searchResults.length === 0 && searchQuery.trim() && (
             <div className="p-4 text-center text-gray-500">
               <div>No users found</div>
               <button
@@ -181,7 +169,7 @@ const UserSearchInput = ({ selectedUsers, onUsersChange, placeholder = "Search u
             </div>
           )}
 
-          {!isSearching && searchResults.length > 0 && (
+          {searchResults.length > 0 && (
             <>
               {searchResults.map((user) => (
                 <button

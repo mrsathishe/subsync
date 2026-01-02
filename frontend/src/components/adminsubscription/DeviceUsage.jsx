@@ -1,8 +1,8 @@
 import React from 'react';
-import { Section, SectionTitle, InputRow, InputGroup, Label, Input, TextArea } from '../styles';
+import { Section, SectionTitle, InputRow, InputGroup, Label, Input, TextArea } from '../styles.jsx';
 import UserSearchInput from '../UserSearchInput';
 
-const DeviceUsage = ({ formData, onChange }) => {
+const DeviceUsage = ({ formData, onChange, usersData }) => {
   const handleCheckboxChange = (e) => {
     const { name, checked } = e.target;
     onChange({
@@ -131,6 +131,7 @@ const DeviceUsage = ({ formData, onChange }) => {
             selectedUsers={getSelectedUsers()}
             onUsersChange={handleUsersChange}
             placeholder="Search users or enter custom names..."
+            usersData={usersData}
           />
           <div className="text-xs text-gray-500 mt-1">
             Search for registered users or press Enter to add custom entries

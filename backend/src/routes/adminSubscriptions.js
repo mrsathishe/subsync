@@ -47,7 +47,7 @@ function calculateNextPurchaseDate(endDate, autoPay) {
 }
 
 // Get all admin subscriptions with filtering and pagination
-router.get('/subscriptions', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -108,6 +108,49 @@ router.get('/subscriptions', authenticateToken, requireAdmin, async (req, res) =
     
     const result = await db.query(query, params);
     
+    // Get ids_using data for all subscriptions
+    const subscriptionIds = result.rows.map(sub => sub.id);
+    let idsUsingMap = {};
+    
+    if (subscriptionIds.length > 0) {
+      const idsUsingResult = await db.query(`
+        SELECT 
+          asu.subscription_id,
+          asu.user_id,
+          asu.custom_name,
+          asu.custom_email,
+          asu.is_registered,
+          u.first_name,
+          u.last_name,
+          u.email
+        FROM admin_subscription_users asu
+        LEFT JOIN users u ON asu.user_id = u.id
+        WHERE asu.subscription_id = ANY($1)
+        ORDER BY asu.subscription_id, asu.id
+      `, [subscriptionIds]);
+      
+      // Group by subscription_id
+      idsUsingResult.rows.forEach(row => {
+        if (!idsUsingMap[row.subscription_id]) {
+          idsUsingMap[row.subscription_id] = [];
+        }
+        idsUsingMap[row.subscription_id].push({
+          userId: row.user_id,
+          name: row.is_registered 
+            ? `${row.first_name} ${row.last_name}` 
+            : row.custom_name,
+          email: row.is_registered ? row.email : row.custom_email,
+          isRegistered: row.is_registered
+        });
+      });
+    }
+    
+    // Add ids_using to each subscription
+    const processedSubscriptions = result.rows.map(subscription => ({
+      ...subscription,
+      ids_using: idsUsingMap[subscription.id] || []
+    }));
+    
     const countQuery = `SELECT COUNT(*) FROM admin_subscription_summary ${whereClause}`;
     const countResult = await db.query(countQuery, params.slice(0, paramCount));
     
@@ -115,7 +158,7 @@ router.get('/subscriptions', authenticateToken, requireAdmin, async (req, res) =
     const totalPages = Math.ceil(totalSubscriptions / limit);
     
     res.json({
-      subscriptions: result.rows,
+      subscriptions: processedSubscriptions,
       pagination: {
         currentPage: parseInt(page),
         totalPages,
@@ -130,7 +173,7 @@ router.get('/subscriptions', authenticateToken, requireAdmin, async (req, res) =
 });
 
 // Get subscription by ID with sharing details
-router.get('/subscriptions/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.get('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -144,6 +187,31 @@ router.get('/subscriptions/:id', authenticateToken, requireAdmin, async (req, re
     }
     
     const subscription = subscriptionResult.rows[0];
+    
+    // Get ids_using data from the separate table
+    const idsUsingResult = await db.query(`
+      SELECT 
+        asu.user_id,
+        asu.custom_name,
+        asu.custom_email,
+        asu.is_registered,
+        u.first_name,
+        u.last_name,
+        u.email
+      FROM admin_subscription_users asu
+      LEFT JOIN users u ON asu.user_id = u.id
+      WHERE asu.subscription_id = $1
+      ORDER BY asu.id
+    `, [id]);
+    
+    const parsedIdsUsing = idsUsingResult.rows.map(row => ({
+      userId: row.user_id,
+      name: row.is_registered 
+        ? `${row.first_name} ${row.last_name}` 
+        : row.custom_name,
+      email: row.is_registered ? row.email : row.custom_email,
+      isRegistered: row.is_registered
+    }));
     
     // Get sharing details if subscription is shared
     let sharingDetails = [];
@@ -164,7 +232,10 @@ router.get('/subscriptions/:id', authenticateToken, requireAdmin, async (req, re
     }
     
     res.json({
-      subscription,
+      subscription: {
+        ...subscription,
+        ids_using: parsedIdsUsing
+      },
       sharingDetails
     });
   } catch (error) {
@@ -173,10 +244,11 @@ router.get('/subscriptions/:id', authenticateToken, requireAdmin, async (req, re
   }
 });
 
-// Create new admin subscription
-router.post('/subscriptions', authenticateToken, requireAdmin, async (req, res) => {
+// Create new admin subscription or update existing one
+router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const {
+      id, // If provided, this is an update operation
       serviceName,
       category,
       ownerType,
@@ -197,14 +269,41 @@ router.post('/subscriptions', authenticateToken, requireAdmin, async (req, res) 
       idsUsing,
       comments,
       shared,
-      sharingDetails
+      sharingDetails,
+      selectedUsers
     } = req.body;
     
     const adminUserId = req.user.userId;
+    const isUpdate = !!id;
+    
+    // If updating, check if subscription exists
+    if (isUpdate) {
+      const existingResult = await db.query(
+        'SELECT id FROM admin_subscriptions WHERE id = $1',
+        [id]
+      );
+      
+      if (existingResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Subscription not found' });
+      }
+    }
     
     // Calculate end date and next purchase date
-    const endDate = calculateEndDate(startDate, planType, customDurationValue, customDurationUnit);
-    const nextPurchaseDate = calculateNextPurchaseDate(endDate, autoPay);
+    let endDate, nextPurchaseDate;
+    if (!isUpdate || startDate || planType || customDurationValue || customDurationUnit) {
+      // For creates or updates that affect dates
+      const finalStartDate = startDate || new Date();
+      endDate = calculateEndDate(finalStartDate, planType, customDurationValue, customDurationUnit);
+      nextPurchaseDate = calculateNextPurchaseDate(endDate, autoPay);
+    } else if (isUpdate) {
+      // For updates that don't affect dates, get current values and recalculate if autoPay changed
+      const current = await db.query('SELECT * FROM admin_subscriptions WHERE id = $1', [id]);
+      const currentSub = current.rows[0];
+      endDate = currentSub.end_date;
+      nextPurchaseDate = autoPay !== undefined 
+        ? calculateNextPurchaseDate(endDate, autoPay)
+        : currentSub.next_purchase_date;
+    }
     
     // Encrypt password if provided
     let passwordEncrypted = null;
@@ -212,163 +311,254 @@ router.post('/subscriptions', authenticateToken, requireAdmin, async (req, res) 
       passwordEncrypted = await bcrypt.hash(password, 10);
     }
     
-    // Create subscription
-    const subscriptionResult = await db.query(`
-      INSERT INTO admin_subscriptions (
-        service_name, category, owner_type, owner_name, login_username_phone,
-        password_encrypted, password_hint, purchased_date, start_date, amount,
-        plan_type, custom_duration_value, custom_duration_unit, end_date,
-        purchased_via, auto_pay, next_purchase_date, device_limit, devices_in_use,
-        ids_using, comments, shared, created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
-      RETURNING *
-    `, [
-      serviceName, category, ownerType, ownerName, loginUsernamePhone,
-      passwordEncrypted, passwordHint, purchasedDate, startDate, amount,
-      planType, customDurationValue, customDurationUnit, endDate,
-      purchasedVia, autoPay, nextPurchaseDate, deviceLimit, devicesInUse,
-      idsUsing, comments, shared, adminUserId
-    ]);
-    
-    const subscription = subscriptionResult.rows[0];
-    
-    // Handle sharing details if subscription is shared
-    if (shared && sharingDetails && sharingDetails.length > 0) {
-      const totalUsers = sharingDetails.length;
-      const sharedAmount = (amount / totalUsers).toFixed(2);
-      
-      for (const sharing of sharingDetails) {
-        await db.query(`
-          INSERT INTO subscription_sharing (
-            subscription_id, user_id, non_registered_name, non_registered_email,
-            shared_amount, payment_status, payment_date
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-        `, [
-          subscription.id,
-          sharing.userId || null,
-          sharing.nonRegisteredName || null,
-          sharing.nonRegisteredEmail || null,
-          sharedAmount,
-          sharing.paymentStatus || 'not_paid',
-          sharing.paymentDate || null
-        ]);
+    // Process idsUsing array to store user information
+    let processedIdsUsing = [];
+    if (idsUsing && Array.isArray(idsUsing)) {
+      for (const user of idsUsing) {
+        if (user.id && typeof user.id === 'number') {
+          // User exists in system - verify user exists and store user ID with details
+          try {
+            const userResult = await db.query('SELECT id, email, first_name, last_name FROM users WHERE id = $1', [user.id]);
+            if (userResult.rows.length > 0) {
+              const foundUser = userResult.rows[0];
+              processedIdsUsing.push({
+                userId: user.id,
+                name: user.name || `${foundUser.first_name} ${foundUser.last_name}`,
+                email: user.email || foundUser.email,
+                isRegistered: true
+              });
+            } else {
+              // User ID provided but not found - store as custom user
+              processedIdsUsing.push({
+                userId: null,
+                name: user.name || 'Unknown User',
+                email: user.email || '',
+                isRegistered: false
+              });
+            }
+          } catch (error) {
+            console.error('Error verifying user:', error);
+            // Store as custom user if verification fails
+            processedIdsUsing.push({
+              userId: null,
+              name: user.name || 'Unknown User',
+              email: user.email || '',
+              isRegistered: false
+            });
+          }
+        } else {
+          // Custom user (no valid user ID)
+          processedIdsUsing.push({
+            userId: null,
+            name: user.name || 'Custom User',
+            email: user.email || '',
+            isRegistered: false
+          });
+        }
       }
     }
     
-    res.status(201).json({
-      message: 'Subscription created successfully',
-      subscription
-    });
-  } catch (error) {
-    console.error('Error creating subscription:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Update subscription
-router.put('/subscriptions/:id', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
+    let subscription;
     
-    // Check if subscription exists
-    const existingResult = await db.query(
-      'SELECT id FROM admin_subscriptions WHERE id = $1',
-      [id]
-    );
-    
-    if (existingResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Subscription not found' });
-    }
-    
-    // Handle password encryption if password is being updated
-    if (updateData.password) {
-      updateData.passwordEncrypted = await bcrypt.hash(updateData.password, 10);
-      delete updateData.password;
-    }
-    
-    // Recalculate dates if relevant fields are updated
-    if (updateData.startDate || updateData.planType || updateData.customDurationValue || updateData.customDurationUnit) {
-      const current = await db.query('SELECT * FROM admin_subscriptions WHERE id = $1', [id]);
-      const currentSub = current.rows[0];
+    if (isUpdate) {
+      // Update existing subscription
+      // Build dynamic update query
+      const updateFields = [];
+      const values = [];
+      let paramCount = 0;
       
-      const startDate = updateData.startDate || currentSub.start_date;
-      const planType = updateData.planType || currentSub.plan_type;
-      const customDurationValue = updateData.customDurationValue || currentSub.custom_duration_value;
-      const customDurationUnit = updateData.customDurationUnit || currentSub.custom_duration_unit;
-      const autoPay = updateData.autoPay !== undefined ? updateData.autoPay : currentSub.auto_pay;
+      const fieldMapping = {
+        serviceName: 'service_name',
+        category: 'category',
+        ownerType: 'owner_type',
+        ownerName: 'owner_name',
+        loginUsernamePhone: 'login_username_phone',
+        passwordHint: 'password_hint',
+        purchasedDate: 'purchased_date',
+        startDate: 'start_date',
+        amount: 'amount',
+        planType: 'plan_type',
+        customDurationValue: 'custom_duration_value',
+        customDurationUnit: 'custom_duration_unit',
+        purchasedVia: 'purchased_via',
+        autoPay: 'auto_pay',
+        deviceLimit: 'device_limit',
+        devicesInUse: 'devices_in_use',
+        comments: 'comments',
+        shared: 'shared'
+      };
       
-      updateData.endDate = calculateEndDate(startDate, planType, customDurationValue, customDurationUnit);
-      updateData.nextPurchaseDate = calculateNextPurchaseDate(updateData.endDate, autoPay);
-    }
-    
-    // Build dynamic update query
-    const updateFields = [];
-    const values = [];
-    let paramCount = 0;
-    
-    const fieldMapping = {
-      serviceName: 'service_name',
-      category: 'category',
-      ownerType: 'owner_type',
-      ownerName: 'owner_name',
-      loginUsernamePhone: 'login_username_phone',
-      passwordEncrypted: 'password_encrypted',
-      passwordHint: 'password_hint',
-      purchasedDate: 'purchased_date',
-      startDate: 'start_date',
-      amount: 'amount',
-      planType: 'plan_type',
-      customDurationValue: 'custom_duration_value',
-      customDurationUnit: 'custom_duration_unit',
-      endDate: 'end_date',
-      purchasedVia: 'purchased_via',
-      autoPay: 'auto_pay',
-      nextPurchaseDate: 'next_purchase_date',
-      deviceLimit: 'device_limit',
-      devicesInUse: 'devices_in_use',
-      idsUsing: 'ids_using',
-      comments: 'comments',
-      shared: 'shared',
-      status: 'status'
-    };
-    
-    for (const [key, dbField] of Object.entries(fieldMapping)) {
-      if (updateData[key] !== undefined) {
+      // Add fields that have values
+      for (const [key, dbField] of Object.entries(fieldMapping)) {
+        if (req.body[key] !== undefined) {
+          paramCount++;
+          updateFields.push(`${dbField} = $${paramCount}`);
+          values.push(req.body[key]);
+        }
+      }
+      
+      // Add password if provided
+      if (passwordEncrypted) {
         paramCount++;
-        updateFields.push(`${dbField} = $${paramCount}`);
-        values.push(updateData[key]);
+        updateFields.push(`password_encrypted = $${paramCount}`);
+        values.push(passwordEncrypted);
+      }
+      
+      // Add calculated dates
+      if (endDate) {
+        paramCount++;
+        updateFields.push(`end_date = $${paramCount}`);
+        values.push(endDate);
+      }
+      
+      if (nextPurchaseDate !== undefined) {
+        paramCount++;
+        updateFields.push(`next_purchase_date = $${paramCount}`);
+        values.push(nextPurchaseDate);
+      }
+      
+      if (updateFields.length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+      
+      paramCount++;
+      values.push(id);
+      
+      const updateQuery = `
+        UPDATE admin_subscriptions 
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramCount}
+        RETURNING *
+      `;
+      
+      const result = await db.query(updateQuery, values);
+      subscription = result.rows[0];
+      
+      // Update idsUsing in separate table if provided
+      if (processedIdsUsing.length >= 0) { // Check for >= 0 to allow clearing all users
+        // First delete all existing entries for this subscription
+        await db.query('DELETE FROM admin_subscription_users WHERE subscription_id = $1', [id]);
+        
+        // Insert new entries
+        if (processedIdsUsing.length > 0) {
+          for (const user of processedIdsUsing) {
+            await db.query(`
+              INSERT INTO admin_subscription_users 
+              (subscription_id, user_id, custom_name, custom_email, is_registered)
+              VALUES ($1, $2, $3, $4, $5)
+            `, [
+              id,
+              user.userId || null,
+              user.name || null,
+              user.email || null,
+              user.isRegistered || false
+            ]);
+          }
+        }
+      }
+      
+    } else {
+      // Create new subscription
+      const subscriptionResult = await db.query(`
+        INSERT INTO admin_subscriptions (
+          service_name, category, owner_type, owner_name, login_username_phone,
+          password_encrypted, password_hint, purchased_date, start_date, amount,
+          plan_type, custom_duration_value, custom_duration_unit, end_date,
+          purchased_via, auto_pay, next_purchase_date, device_limit, devices_in_use,
+          comments, shared, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+        RETURNING *
+      `, [
+        serviceName, category, ownerType, ownerName, loginUsernamePhone,
+        passwordEncrypted, passwordHint, purchasedDate, startDate, amount,
+        planType, customDurationValue, customDurationUnit, endDate,
+        purchasedVia, autoPay, nextPurchaseDate, deviceLimit, devicesInUse,
+        comments, shared, adminUserId
+      ]);
+      
+      subscription = subscriptionResult.rows[0];
+      
+      // Insert idsUsing data into the separate table
+      if (processedIdsUsing.length > 0) {
+        for (const user of processedIdsUsing) {
+          await db.query(`
+            INSERT INTO admin_subscription_users 
+            (subscription_id, user_id, custom_name, custom_email, is_registered)
+            VALUES ($1, $2, $3, $4, $5)
+          `, [
+            subscription.id,
+            user.userId || null,
+            user.name || null,
+            user.email || null,
+            user.isRegistered || false
+          ]);
+        }
+      }
+      
+      // Handle sharing details if subscription is shared
+      if (shared && sharingDetails && sharingDetails.length > 0) {
+        const totalUsers = sharingDetails.length;
+        const sharedAmount = (amount / totalUsers).toFixed(2);
+        
+        for (const sharing of sharingDetails) {
+          await db.query(`
+            INSERT INTO subscription_sharing (
+              subscription_id, user_id, non_registered_name, non_registered_email,
+              shared_amount, payment_status, payment_date
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `, [
+            subscription.id,
+            sharing.userId || null,
+            sharing.nonRegisteredName || null,
+            sharing.nonRegisteredEmail || null,
+            sharedAmount,
+            sharing.paymentStatus || 'not_paid',
+            sharing.paymentDate || null
+          ]);
+        }
       }
     }
     
-    if (updateFields.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
+    // Get the idsUsing data for the response
+    const idsUsingResult = await db.query(`
+      SELECT 
+        asu.user_id,
+        asu.custom_name,
+        asu.custom_email,
+        asu.is_registered,
+        u.first_name,
+        u.last_name,
+        u.email
+      FROM admin_subscription_users asu
+      LEFT JOIN users u ON asu.user_id = u.id
+      WHERE asu.subscription_id = $1
+      ORDER BY asu.id
+    `, [subscription.id]);
     
-    paramCount++;
-    values.push(id);
+    const formattedIdsUsing = idsUsingResult.rows.map(row => ({
+      userId: row.user_id,
+      name: row.is_registered 
+        ? `${row.first_name} ${row.last_name}` 
+        : row.custom_name,
+      email: row.is_registered ? row.email : row.custom_email,
+      isRegistered: row.is_registered
+    }));
     
-    const updateQuery = `
-      UPDATE admin_subscriptions 
-      SET ${updateFields.join(', ')}
-      WHERE id = $${paramCount}
-      RETURNING *
-    `;
-    
-    const result = await db.query(updateQuery, values);
-    
-    res.json({
-      message: 'Subscription updated successfully',
-      subscription: result.rows[0]
+    res.status(isUpdate ? 200 : 201).json({
+      message: `Subscription ${isUpdate ? 'updated' : 'created'} successfully`,
+      subscription: {
+        ...subscription,
+        ids_using: formattedIdsUsing
+      }
     });
   } catch (error) {
-    console.error('Error updating subscription:', error);
+    console.error(`Error ${req.body.id ? 'updating' : 'creating'} subscription:`, error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Delete subscription
-router.delete('/subscriptions/:id', authenticateToken, requireAdmin, async (req, res) => {
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     
@@ -389,7 +579,7 @@ router.delete('/subscriptions/:id', authenticateToken, requireAdmin, async (req,
 });
 
 // Update sharing details
-router.put('/subscriptions/:id/sharing', authenticateToken, requireAdmin, async (req, res) => {
+router.put('/:id/sharing', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { sharingDetails } = req.body;
@@ -442,52 +632,5 @@ router.put('/subscriptions/:id/sharing', authenticateToken, requireAdmin, async 
   }
 });
 
-// Get dashboard statistics
-router.get('/dashboard', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const stats = await db.query(`
-      SELECT 
-        COUNT(*) as total_subscriptions,
-        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_subscriptions,
-        COUNT(CASE WHEN status = 'expired' THEN 1 END) as expired_subscriptions,
-        COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_subscriptions,
-        COUNT(CASE WHEN shared = true THEN 1 END) as shared_subscriptions,
-        SUM(amount) as total_amount,
-        SUM(CASE WHEN status = 'active' THEN amount ELSE 0 END) as active_amount
-      FROM admin_subscriptions
-    `);
-    
-    const categoryStats = await db.query(`
-      SELECT 
-        category,
-        COUNT(*) as count,
-        SUM(amount) as total_amount
-      FROM admin_subscriptions
-      WHERE status = 'active'
-      GROUP BY category
-    `);
-    
-    const upcomingRenewals = await db.query(`
-      SELECT 
-        service_name,
-        end_date,
-        amount,
-        auto_pay
-      FROM admin_subscriptions
-      WHERE status = 'active' AND end_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '30 days'
-      ORDER BY end_date ASC
-      LIMIT 10
-    `);
-    
-    res.json({
-      stats: stats.rows[0],
-      categoryStats: categoryStats.rows,
-      upcomingRenewals: upcomingRenewals.rows
-    });
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
 
 module.exports = router;

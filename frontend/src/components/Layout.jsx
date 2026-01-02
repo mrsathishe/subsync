@@ -19,10 +19,9 @@ import {
   TopBar,
   MobileMenuButton,
   ContentArea
-} from './styles';
+} from './styles.jsx';
 
 const navigationItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: '📊' },
   { path: '/subscriptions', label: 'Subscriptions', icon: '💳' },
   { path: '/profile', label: 'Profile', icon: '👤' },
 ];
@@ -35,7 +34,6 @@ function Layout() {
   // Navigation items based on user role
   const getNavigationItems = () => {
     const baseItems = [
-      { path: '/dashboard', label: 'Dashboard', icon: '📊' },
       { path: '/subscriptions', label: 'Subscriptions', icon: '💳' },
       { path: '/profile', label: 'Profile', icon: '👤' },
     ];

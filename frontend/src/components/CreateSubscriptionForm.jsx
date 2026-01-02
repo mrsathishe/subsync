@@ -8,9 +8,9 @@ import {
   DeviceUsage, 
   SharingSection 
 } from './adminsubscription';
-import { Form, Button, ErrorMessage, Modal, ModalContent, ModalHeader, ModalTitle, CloseButton, ModalBody, ModalFooter } from './styles';
+import { Form, Button, ErrorMessage, Modal, ModalContent, ModalHeader, ModalTitle, CloseButton, ModalBody, ModalFooter } from './styles.jsx';
 
-function AdminSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
+function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
   const [formData, setFormData] = useState({
     serviceName: '',
     category: '',
@@ -202,7 +202,7 @@ function AdminSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
       if (isEditing) {
         await adminAPI.updateAdminSubscription(subscription.id, submitData);
       } else {
-        await adminAPI.createAdminSubscription(submitData);
+        await adminAPI.createSubscription(submitData);
         resetForm(); // Reset form only for new subscriptions
       }
 
@@ -252,6 +252,7 @@ function AdminSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
             <DeviceUsage 
               formData={formData}
               onChange={handleChange}
+              usersData={usersData}
             />
 
             <SharingSection 
@@ -285,4 +286,4 @@ function AdminSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
   );
 }
 
-export default AdminSubscriptionForm;
+export default CreateSubscriptionForm;

@@ -1,7 +1,6 @@
 // Pages
 import LoginPage from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
-import DashboardPage from '../pages/DashboardPage';
 import SubscriptionsPage from '../pages/SubscriptionsPage';
 import ProfilePage from '../pages/ProfilePage';
 import ManageUsers from '../pages/ManageUsers';
@@ -24,11 +23,6 @@ export const routesConfig = {
   protected: {
     layout: Layout,
     children: [
-      {
-        path: "dashboard",
-        component: DashboardPage,
-        key: "dashboard"
-      },
       {
         path: "subscriptions",
         component: SubscriptionsPage,

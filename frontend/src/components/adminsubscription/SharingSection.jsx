@@ -1,5 +1,5 @@
 import React from 'react';
-import { Section, SectionTitle, CheckboxContainer, Checkbox, Label, SharingSection as SharingContainer, SharingItem, InputGroup, Select, Input, Button } from '../styles';
+import { Section, SectionTitle, CheckboxContainer, Checkbox, Label, SharingSection as SharingContainer, SharingItem, InputGroup, Select, Input, Button } from '../styles.jsx';
 
 const SharingSection = ({ 
   formData, 

@@ -168,8 +168,8 @@ export const useAdminSubscription = (id) => {
   );
 };
 
-export const useCreateAdminSubscription = () => {
-  return useMutation(adminAPI.createAdminSubscription);
+export const useCreateSubscription = () => {
+  return useMutation(adminAPI.createSubscription);
 };
 
 export const useUpdateAdminSubscription = () => {
@@ -182,8 +182,4 @@ export const useDeleteAdminSubscription = () => {
 
 export const useUpdateSubscriptionSharing = () => {
   return useMutation(({ id, sharingDetails }) => adminAPI.updateSubscriptionSharing(id, sharingDetails));
-};
-
-export const useAdminDashboard = () => {
-  return useApiCall(adminAPI.getAdminDashboard);
 };

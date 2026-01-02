@@ -1,5 +1,5 @@
 import React from 'react';
-import { PageHeader, PageTitle, PageSubtitle } from '../../pages/styles/adminUsers.styles';
+import { PageHeader, PageTitle, PageSubtitle } from '../../pages/styles/adminUsers.styles.jsx';
 
 const ManageUsersPageHeader = ({ title = "User Dashboard", subtitle = "Manage users." }) => {
   return (
