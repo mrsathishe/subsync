@@ -1,4 +1,68 @@
 
+export const getUserTableConfig = (formatDate, formatGender, currentUserRole) => ({
+  headers: [
+    ...(currentUserRole === 'admin' ? [{ key: 'actions', label: 'Actions', type: 'actions' }] : []),
+    { key: 'id', label: 'ID', type: 'text' },
+    { key: 'first_name', label: 'First Name', type: 'text' },
+    { key: 'last_name', label: 'Last Name', type: 'text' },
+    { key: 'email', label: 'Email', type: 'text' },
+    { key: 'phone', label: 'Phone', type: 'text' },
+    { key: 'is_active', label: 'Status', type: 'badge' },
+    { key: 'role', label: 'Role', type: 'role' },
+    { key: 'date_of_birth', label: 'Date of Birth', type: 'date' },
+    { key: 'gender', label: 'Gender', type: 'gender' }
+  ],
+  
+  formatValue: (userData, column) => {
+    switch (column.type) {
+      case 'actions':
+        // Only show actions if current user is admin
+        if (currentUserRole !== 'admin') {
+          return null;
+        }
+        return {
+          userId: userData.id,
+          actions: [
+            { 
+              label: userData.is_active ? 'Deactivate' : 'Activate', 
+              action: 'toggle-status', 
+              icon: userData.is_active ? '🚫' : '✅' 
+            },
+            { 
+              label: userData.role === 'admin' ? 'Remove Admin' : 'Make as Admin', 
+              action: 'toggle-role', 
+              icon: userData.role === 'admin' ? '👤' : '👑' 
+            }
+          ]
+        };
+      
+      case 'text':
+        return userData[column.key] || 'N/A';
+      
+      case 'badge':
+        return {
+          status: userData.is_active ? 'active' : 'inactive',
+          label: userData.is_active ? 'Active' : 'Inactive'
+        };
+      
+      case 'role':
+        return {
+          role: userData.role,
+          label: userData.role
+        };
+      
+      case 'date':
+        return formatDate(userData[column.key]);
+      
+      case 'gender':
+        return formatGender(userData[column.key]);
+      
+      default:
+        return userData[column.key] || 'N/A';
+    }
+  }
+});
+
 export const getSubscriptionStatsCards = (subscriptionsData, formatCurrency, userRole) => {
   if (!subscriptionsData?.subscriptions) {
     return [
