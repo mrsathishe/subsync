@@ -5,7 +5,7 @@ import { resolve } from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/subsync/',  // For hosting at satz.co.in/subsync
+  // Remove base path for direct port access
   plugins: [
     react(),
     tailwindcss(),
@@ -16,6 +16,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0',  // Allow external connections
     port: 5173,
     proxy: {
       '/api': {
@@ -23,6 +24,10 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
+  },
+  preview: {
+    host: '0.0.0.0',  // Allow external connections for production preview
+    port: 3001
   },
   build: {
     outDir: 'dist',

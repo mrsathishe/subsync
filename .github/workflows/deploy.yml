@@ -61,7 +61,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
-      - name: Deploy to Home Server
+      - name: Deploy to Home Server (Direct Port Access)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}  # Your home server IP (192.168.1.2 or public IP)
@@ -69,16 +69,16 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_PORT || 22 }}
           script: |
-            echo "🚀 Starting deployment to satz.co.in/subsync..."
+            echo "🚀 Starting deployment with direct port access..."
             
             # Navigate to application directory
-            cd ${{ secrets.APP_DIR || '/var/www/subsync' }}
+            cd ${{ secrets.APP_DIR || '/home/$USER/subsync' }}
             
             # Pull latest changes
             echo "📥 Pulling latest changes..."
             git pull origin main
             
-            # Backend deployment
+            # Backend deployment (Port 3000)
             echo "🔧 Installing backend dependencies..."
             cd backend
             npm install --production
@@ -88,33 +88,28 @@ jobs:
               cp .env.prod .env
             fi
             
-            # Restart backend with PM2
-            echo "🔄 Restarting backend service..."
+            # Restart backend with PM2 on port 3000
+            echo "🔄 Restarting backend service on port 3000..."
             pm2 restart subsync-backend || pm2 start server.js --name subsync-backend --env production
             
-            # Frontend deployment for subdirectory hosting
-            echo "🎨 Building and deploying frontend for satz.co.in/subsync..."
+            # Frontend deployment (Port 3001 for production)
+            echo "🎨 Building and deploying frontend for port 3001..."
             cd ../frontend
             npm install --production
             npm run build
             
-            # Deploy to nginx subdirectory
-            sudo mkdir -p /var/www/html/subsync
-            sudo cp -r dist/* /var/www/html/subsync/
-            sudo chown -R www-data:www-data /var/www/html/subsync
-            
-            # Update nginx configuration if needed
-            if [ -f "../.github/nginx-config/satz.co.in.conf" ]; then
-              sudo cp ../.github/nginx-config/satz.co.in.conf /etc/nginx/sites-available/satz.co.in
-              sudo ln -sf /etc/nginx/sites-available/satz.co.in /etc/nginx/sites-enabled/
-              sudo nginx -t && sudo systemctl reload nginx || echo "⚠️ Nginx config update failed"
-            fi
+            # Serve built frontend on port 3001 with PM2
+            echo "🌐 Starting frontend service on port 3001..."
+            pm2 delete subsync-frontend 2>/dev/null || true
+            pm2 serve dist 3001 --name subsync-frontend --spa
             
             # Save PM2 configuration
             pm2 save
             
             echo "✅ Deployment completed successfully!"
-            echo "🌐 Visit: https://satz.co.in/subsync"
+            echo "🌐 Frontend: http://satz.co.in:3001"
+            echo "🔧 Backend API: http://satz.co.in:3000/api"
+            echo "🛠️ Development: http://satz.co.in:5173 (when running npm run dev)"
 
       - name: Notify Deployment Status
         if: always()
@@ -141,9 +136,9 @@ jobs:
         
       - name: Health Check Backend
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://satz.co.in/health || echo "000")
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://satz.co.in:3000/health || echo "000")
           if [ "$response" = "200" ]; then
-            echo "✅ Backend health check passed"
+            echo "✅ Backend health check passed (Port 3000)"
           else
             echo "❌ Backend health check failed with status: $response"
             exit 1
@@ -151,9 +146,9 @@ jobs:
 
       - name: Health Check Frontend
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" https://satz.co.in/subsync || echo "000")
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://satz.co.in:3001 || echo "000")
           if [ "$response" = "200" ]; then
-            echo "✅ Frontend health check passed at satz.co.in/subsync"
+            echo "✅ Frontend health check passed (Port 3001)"
           else
             echo "❌ Frontend health check failed with status: $response"
             exit 1
