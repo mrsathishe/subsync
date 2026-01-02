@@ -14,68 +14,18 @@ const DeviceUsage = ({ formData, onChange, usersData }) => {
   };
 
   const handleUsersChange = (selectedUsers) => {
-    // Convert users array to the expected format for the form
-    const usersString = selectedUsers.map(user => {
-      if (user.isCustom) {
-        return user.name;
-      } else {
-        return `${user.name} (${user.email}) [ID: ${user.id}]`;
-      }
-    }).join(', ');
-
+    // Store the structured users data
     onChange({
       target: {
-        name: 'idsUsing',
-        value: usersString
-      }
-    });
-
-    // Also store the structured users data
-    onChange({
-      target: {
-        name: 'selectedUsers',
+        name: 'idsUsingDetails',
         value: selectedUsers
       }
     });
   };
 
-  // Parse existing idsUsing string back to users array for the search input
+  // Get selected users from structured data
   const getSelectedUsers = () => {
-    if (formData.selectedUsers && Array.isArray(formData.selectedUsers)) {
-      return formData.selectedUsers;
-    }
-
-    // If no structured data, try to parse from idsUsing string
-    if (!formData.idsUsing) return [];
-
-    const users = [];
-    const entries = formData.idsUsing.split(',').map(entry => entry.trim()).filter(entry => entry);
-    
-    entries.forEach((entry, index) => {
-      // Try to extract structured data
-      const idMatch = entry.match(/\[ID: (\d+)\]$/);
-      const emailMatch = entry.match(/\(([^)]+@[^)]+)\)/);
-      
-      if (idMatch && emailMatch) {
-        // Structured user entry
-        const name = entry.replace(/ \([^)]+\) \[ID: \d+\]$/, '');
-        users.push({
-          id: parseInt(idMatch[1]),
-          name: name,
-          email: emailMatch[1],
-          isCustom: false
-        });
-      } else {
-        // Custom entry
-        users.push({
-          id: `custom_${index}`,
-          name: entry,
-          isCustom: true
-        });
-      }
-    });
-
-    return users;
+    return formData.idsUsingDetails || [];
   };
 
   return (
@@ -111,20 +61,20 @@ const DeviceUsage = ({ formData, onChange, usersData }) => {
       <InputGroup standalone>
         <div className="flex items-center gap-2">
           <input
-            id="isShared"
-            name="isShared"
+            id="idsUsing"
+            name="idsUsing"
             type="checkbox"
-            checked={formData.isShared || false}
+            checked={formData.idsUsing || false}
             onChange={handleCheckboxChange}
             className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
           />
-          <Label htmlFor="isShared" className="mb-0 cursor-pointer">
+          <Label htmlFor="idsUsing" className="mb-0 cursor-pointer">
             ID Shared
           </Label>
         </div>
       </InputGroup>
 
-      {formData.isShared && (
+      {formData.idsUsing && (
         <InputGroup standalone>
           <Label htmlFor="idsUsing">IDs Using</Label>
           <UserSearchInput

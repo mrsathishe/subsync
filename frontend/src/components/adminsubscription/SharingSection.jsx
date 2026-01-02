@@ -15,16 +15,16 @@ const SharingSection = ({
       
       <CheckboxContainer>
         <Checkbox
-          id="shared"
-          name="shared"
+          id="isSharing"
+          name="isSharing"
           type="checkbox"
-          checked={formData.shared}
+          checked={formData.isSharing}
           onChange={onChange}
         />
-        <Label htmlFor="shared">This subscription is shared</Label>
+        <Label htmlFor="isSharing">This subscription is shared</Label>
       </CheckboxContainer>
 
-      {formData.shared && (
+      {formData.isSharing && (
         <SharingContainer>
           <div style={{ marginBottom: '1rem' }}>
             <strong>Shared Users</strong>

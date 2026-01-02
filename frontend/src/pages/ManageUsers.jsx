@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useAdminUsers } from '../hooks/useApi';
 import { useAuth } from '../contexts/AuthContext';
+import { useUsers } from '../contexts/UsersContext';
 import ManageUsersPageHeader from '../components/manageUser/PageHeader';
 import UserTable from '../components/manageUser/UserTable';
 import UserPagination from '../components/manageUser/Pagination';
@@ -12,8 +12,8 @@ import {
 
 function ManageUsers() {
   const { user } = useAuth();
+  const { usersData, loading: usersLoading } = useUsers(); // Use context instead of hook
   const [currentPage, setCurrentPage] = useState(1);
-  const { data: usersData, loading: usersLoading } = useAdminUsers(currentPage, 20);
 
   if (user?.role !== 'admin') {
     return (
@@ -42,7 +42,8 @@ function ManageUsers() {
           <CardContent>
             <UserTable 
               usersData={usersData} 
-              isLoading={usersLoading} 
+              isLoading={usersLoading}
+              currentUserRole={user?.role}
             />
             
             {!usersLoading && usersData?.users?.length > 0 && (

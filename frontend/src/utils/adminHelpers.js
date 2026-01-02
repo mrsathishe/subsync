@@ -7,9 +7,9 @@ export const getUserCards = (usersData) => [
   }
 ];
 
-export const getUserTableConfig = (formatDate, formatGender) => ({
+export const getUserTableConfig = (formatDate, formatGender, currentUserRole) => ({
   headers: [
-    { key: 'actions', label: 'Actions', type: 'actions' },
+    ...(currentUserRole === 'admin' ? [{ key: 'actions', label: 'Actions', type: 'actions' }] : []),
     { key: 'id', label: 'ID', type: 'text' },
     { key: 'first_name', label: 'First Name', type: 'text' },
     { key: 'last_name', label: 'Last Name', type: 'text' },
@@ -24,6 +24,10 @@ export const getUserTableConfig = (formatDate, formatGender) => ({
   formatValue: (userData, column) => {
     switch (column.type) {
       case 'actions':
+        // Only show actions if current user is admin
+        if (currentUserRole !== 'admin') {
+          return null;
+        }
         return {
           userId: userData.id,
           actions: [
@@ -67,35 +71,62 @@ export const getUserTableConfig = (formatDate, formatGender) => ({
   }
 });
 
-export const getSubscriptionStatsCards = (dashboardData, formatCurrency) => [
-  {
-    icon: "📊",
-    value: dashboardData?.stats?.total_subscriptions || 0,
-    label: "Total Subscriptions"
-  },
-  {
-    icon: "✅",
-    value: dashboardData?.stats?.active_subscriptions || 0,
-    label: "Active"
-  },
-  {
-    icon: "⏰",
-    value: dashboardData?.stats?.expired_subscriptions || 0,
-    label: "Expired"
-  },
-  {
-    icon: "🤝",
-    value: dashboardData?.stats?.shared_subscriptions || 0,
-    label: "Shared"
-  },
-  {
-    icon: "💰",
-    value: formatCurrency ? formatCurrency(dashboardData?.stats?.total_amount || 0) : `₹${Number(dashboardData?.stats?.total_amount || 0).toFixed(2)}`,
-    label: "Total Amount"
+export const getSubscriptionStatsCards = (subscriptionsData, formatCurrency, userRole) => {
+  if (!subscriptionsData?.subscriptions) {
+    return [
+      {
+        icon: "📊",
+        value: 0,
+        label: "Total Subscriptions"
+      },
+      {
+        icon: "🔑",
+        value: 0,
+        label: "IDs Using"
+      },
+      {
+        icon: "🤝",
+        value: 0,
+        label: "Sharing"
+      }
+    ];
   }
-];
 
-export const getSubscriptionFilters = () => [
+  const subscriptions = subscriptionsData.subscriptions;
+  const totalSubscriptions = subscriptions.length;
+  
+  // For regular users: check ids_using boolean
+  // For admin users: check idsUsingDetails array or ids_using boolean
+  const idsUsingCount = subscriptions.filter(sub => {
+    if (userRole === 'admin') {
+      return sub.ids_using || (sub.idsUsingDetails && sub.idsUsingDetails.length > 0);
+    } else {
+      return sub.ids_using === true;
+    }
+  }).length;
+  
+  const sharingCount = subscriptions.filter(sub => sub.isSharing === true).length;
+
+  return [
+    {
+      icon: "📊",
+      value: totalSubscriptions,
+      label: "Total Subscriptions"
+    },
+    {
+      icon: "🔑",
+      value: idsUsingCount,
+      label: "IDs Using"
+    },
+    {
+      icon: "🤝",
+      value: sharingCount,
+      label: "Sharing"
+    }
+  ];
+};
+
+export const getSubscriptionFilters = (userRole) => [
   {
     key: 'search',
     label: 'Search',
@@ -125,7 +156,7 @@ export const getSubscriptionFilters = () => [
       { value: 'paused', label: 'Paused' }
     ]
   },
-  {
+  ...(userRole === 'admin' ? [{
     key: 'owner_type',
     label: 'Owner',
     type: 'select',
@@ -139,8 +170,8 @@ export const getSubscriptionFilters = () => [
       { value: 'Sister', label: 'Sister' },
       { value: 'Other', label: 'Other' }
     ]
-  },
-  {
+  }] : []),
+  ...(userRole === 'admin' ? [{
     key: 'shared',
     label: 'Sharing',
     type: 'select',
@@ -149,14 +180,14 @@ export const getSubscriptionFilters = () => [
       { value: 'true', label: 'Shared' },
       { value: 'false', label: 'Not Shared' }
     ]
-  }
+  }] : [])
 ];
 
-export const getSubscriptionTableConfig = (formatCurrency, formatDate, categoryIcons, handleView, handleEdit, handleDelete) => ({
+export const getSubscriptionTableConfig = (formatCurrency, formatDate, categoryIcons, handleView, handleEdit, handleDelete, userRole) => ({
   headers: [
     { key: 'service', label: 'Service', type: 'service' },
     { key: 'category', label: 'Category', type: 'category' },
-    { key: 'owner_type', label: 'Owner', type: 'text' },
+    ...(userRole === 'admin' ? [{ key: 'owner_type', label: 'Owner', type: 'text' }] : []),
     { key: 'amount', label: 'Amount', type: 'currency' },
     { key: 'status', label: 'Status', type: 'status' },
     { key: 'end_date', label: 'End Date', type: 'date' },
@@ -185,9 +216,10 @@ export const getSubscriptionTableConfig = (formatCurrency, formatDate, categoryI
         return formatCurrency(subscription.amount);
       
       case 'status':
+        const status = subscription.status || 'active'; // Default to 'active' if no status
         return {
-          status: subscription.status,
-          label: subscription.status
+          status: status,
+          label: status.charAt(0).toUpperCase() + status.slice(1) // Capitalize first letter
         };
       
       case 'date':
@@ -195,15 +227,15 @@ export const getSubscriptionTableConfig = (formatCurrency, formatDate, categoryI
       
       case 'shared':
         return {
-          shared: subscription.shared,
-          totalUsers: subscription.total_shared_users
+          shared: subscription.isSharing || subscription.ids_using,
+          totalUsers: subscription.total_shared_users || (subscription.idsUsingDetails ? subscription.idsUsingDetails.length : 0)
         };
       
       case 'actions':
         return {
           subscriptionId: subscription.id,
           serviceName: subscription.service_name,
-          actions: [
+          actions: userRole === 'admin' ? [
             { 
               label: '👁️ View', 
               variant: 'view',
@@ -218,6 +250,12 @@ export const getSubscriptionTableConfig = (formatCurrency, formatDate, categoryI
               label: '🗑️ Delete', 
               variant: 'delete',
               onClick: () => handleDelete(subscription.id, subscription.service_name)
+            }
+          ] : [
+            { 
+              label: '👁️ View', 
+              variant: 'view',
+              onClick: () => handleView(subscription.id)
             }
           ]
         };

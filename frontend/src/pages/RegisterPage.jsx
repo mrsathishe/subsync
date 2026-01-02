@@ -1,16 +1,23 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Footer from '../components/Footer';
 
 // Tailwind CSS Components
 const PageContainer = ({ children }) => (
-  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-700 p-6">
+  <div className="min-h-screen flex flex-col justify-between bg-gray-50">
+    {children}
+  </div>
+);
+
+const MainContent = ({ children }) => (
+  <div className="flex items-center justify-center flex-1 p-6">
     {children}
   </div>
 );
 
 const RegisterCard = ({ children }) => (
-  <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+  <div className="bg-white p-8 rounded-lg border-2 border-brand-600 shadow-2xl shadow-brand-600/25 w-full max-w-md">
     {children}
   </div>
 );
@@ -154,7 +161,8 @@ function RegisterPage() {
 
   return (
     <PageContainer>
-      <RegisterCard>
+      <MainContent>
+        <RegisterCard>
         <Logo>SubSync</Logo>
         
         {error && <ErrorMessage>{error}</ErrorMessage>}
@@ -281,7 +289,9 @@ function RegisterPage() {
         <LinkContainer>
           Already have an account? <StyledLink to="/login">Sign in</StyledLink>
         </LinkContainer>
-      </RegisterCard>
+        </RegisterCard>
+      </MainContent>
+      <Footer />
     </PageContainer>
   );
 }

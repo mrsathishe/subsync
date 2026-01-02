@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Footer from './Footer';
 import {
   LayoutContainer,
   Sidebar,
@@ -102,6 +103,7 @@ function Layout() {
         
         <ContentArea>
           <Outlet />
+          <Footer />
         </ContentArea>
       </MainContent>
     </LayoutContainer>

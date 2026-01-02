@@ -1,35 +1,110 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { subscriptionAPI, userAPI, adminAPI, ottAPI } from '../services/api';
 
-// Generic hook for API calls
+// Global cache with request deduplication
+const globalCache = new Map();
+const pendingRequests = new Map();
+
+// Generic hook for API calls with request deduplication
 const useApiCall = (apiFunction, dependencies = [], options = {}) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const isMountedRef = useRef(true);
+
+  const cacheKey = JSON.stringify(dependencies);
 
   const fetchData = useCallback(async () => {
     if (options.enabled === false) return;
     
-    setLoading(true);
-    setError(null);
+    console.log('fetchData called with cacheKey:', cacheKey);
+    
+    // Check cache first
+    if (globalCache.has(cacheKey)) {
+      const cachedData = globalCache.get(cacheKey);
+      console.log('Using cached data:', cachedData);
+      if (isMountedRef.current) {
+        setData(cachedData);
+        setLoading(false);
+      }
+      return;
+    }
+    
+    // Check if request is already pending
+    if (pendingRequests.has(cacheKey)) {
+      console.log('Request already pending, waiting...');
+      try {
+        const result = await pendingRequests.get(cacheKey);
+        if (isMountedRef.current) {
+          console.log('Setting data from pending request:', result);
+          setData(result);
+          setLoading(false);
+        }
+        return;
+      } catch (err) {
+        if (isMountedRef.current) {
+          console.error('Setting error from pending request:', err);
+          setError(err);
+          setLoading(false);
+        }
+        return;
+      }
+    }
+    
+    console.log('Making new API request...');
+    if (isMountedRef.current) {
+      setLoading(true);
+      setError(null);
+    }
+    
+    // Create and store the pending request promise
+    const requestPromise = apiFunction().then(result => {
+      console.log('API request successful:', result);
+      globalCache.set(cacheKey, result);
+      // Cache for 5 minutes
+      setTimeout(() => {
+        globalCache.delete(cacheKey);
+      }, 300000);
+      pendingRequests.delete(cacheKey);
+      return result;
+    }).catch(err => {
+      console.error('API request failed:', err);
+      pendingRequests.delete(cacheKey);
+      throw err;
+    });
+    
+    pendingRequests.set(cacheKey, requestPromise);
     
     try {
-      const result = await apiFunction();
-      setData(result);
+      const result = await requestPromise;
+      if (isMountedRef.current) {
+        console.log('Setting data from new request:', result);
+        setData(result);
+        setLoading(false);
+      }
     } catch (err) {
-      setError(err);
-    } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        console.error('Setting error from new request:', err);
+        setError(err);
+        setLoading(false);
+      }
     }
   }, dependencies);
 
   useEffect(() => {
+    isMountedRef.current = true;
     fetchData();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchData]);
 
   const refetch = useCallback(() => {
+    // Clear cache and pending requests on manual refetch
+    globalCache.delete(cacheKey);
+    pendingRequests.delete(cacheKey);
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, cacheKey]);
 
   return { data, loading, error, refetch };
 };

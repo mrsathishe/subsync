@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useAdminSubscriptions, useDeleteAdminSubscription } from '../hooks/useApi';
 import { useAuth } from '../contexts/AuthContext';
+import { useUsers } from '../contexts/UsersContext';
 import CreateSubscriptionForm from '../components/CreateSubscriptionForm';
-import AdminSubscriptionDetails from '../components/AdminSubscriptionDetails';
+import ViewSubscriptionDetails from '../components/ViewSubscriptionDetails';
 import SubscriptionsPageHeader from '../components/subscription/PageHeader';
 import StatsSection from '../components/subscription/StatsSection';
 import FiltersSection from '../components/subscription/FiltersSection';
@@ -16,6 +17,7 @@ const PageContainer = ({ children }) => (
 
 function SubscriptionsPage() {
   const { user } = useAuth();
+  const { usersData } = useUsers(); // Use context instead of hook
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState({
     category: '',
@@ -37,6 +39,11 @@ function SubscriptionsPage() {
   );
   
   const deleteSubscriptionMutation = useDeleteAdminSubscription();
+
+  // Debug: Log the subscriptions data
+  console.log('Subscriptions data:', subscriptionsData);
+  console.log('Is loading:', isLoading);
+  console.log('User role:', user?.role);
 
   const categoryIcons = {
     'OTT': '📺',
@@ -79,9 +86,9 @@ function SubscriptionsPage() {
   };
 
   // Get data objects from helper functions
-  const statsCards = getSubscriptionStatsCards(null, formatCurrency);
-  const filterConfig = getSubscriptionFilters();
-  const tableConfig = getSubscriptionTableConfig(formatCurrency, formatDate, categoryIcons, handleView, handleEdit, handleDelete);
+  const statsCards = getSubscriptionStatsCards(subscriptionsData, formatCurrency, user?.role);
+  const filterConfig = getSubscriptionFilters(user?.role);
+  const tableConfig = getSubscriptionTableConfig(formatCurrency, formatDate, categoryIcons, handleView, handleEdit, handleDelete, user?.role);
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({ ...prev, [field]: value }));
@@ -198,9 +205,10 @@ function SubscriptionsPage() {
           setEditingSubscription(null);
           refetch();
         }}
+        usersData={usersData}
       />
 
-      <AdminSubscriptionDetails
+      <ViewSubscriptionDetails
         subscriptionId={viewingSubscription}
         isOpen={!!viewingSubscription}
         onClose={() => setViewingSubscription(null)}
@@ -208,6 +216,7 @@ function SubscriptionsPage() {
           setViewingSubscription(null);
           setEditingSubscription(subscription);
         }}
+        usersData={usersData}
       />
     </PageContainer>
   );

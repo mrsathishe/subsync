@@ -1,16 +1,23 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Footer from '../components/Footer';
 
 // Tailwind CSS Components
 const PageContainer = ({ children }) => (
-  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-600 to-brand-700 p-6">
+  <div className="min-h-screen flex flex-col justify-between bg-gray-50">
+    {children}
+  </div>
+);
+
+const MainContent = ({ children }) => (
+  <div className="flex items-center justify-center flex-1 p-6">
     {children}
   </div>
 );
 
 const LoginCard = ({ children }) => (
-  <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+  <div className="bg-white p-8 rounded-lg border-2 border-brand-600 shadow-2xl shadow-brand-600/25 w-full max-w-md">
     {children}
   </div>
 );
@@ -121,47 +128,50 @@ function LoginPage() {
 
   return (
     <PageContainer>
-      <LoginCard>
-        <Logo>SubSync</Logo>
-        
-        {error && <ErrorMessage>{error}</ErrorMessage>}
-        
-        <Form onSubmit={handleSubmit} noValidate>
-          <InputGroup>
-            <Label htmlFor="emailOrPhone">Email or Phone Number</Label>
-            <Input
-              id="emailOrPhone"
-              name="emailOrPhone"
-              type="text"
-              value={formData.emailOrPhone}
-              onChange={handleChange}
-              required
-              placeholder="Enter your email or phone number"
-            />
-          </InputGroup>
+      <MainContent>
+        <LoginCard>
+          <Logo>SubSync</Logo>
+          
+          {error && <ErrorMessage>{error}</ErrorMessage>}
+          
+          <Form onSubmit={handleSubmit} noValidate>
+            <InputGroup>
+              <Label htmlFor="emailOrPhone">Email or Phone Number</Label>
+              <Input
+                id="emailOrPhone"
+                name="emailOrPhone"
+                type="text"
+                value={formData.emailOrPhone}
+                onChange={handleChange}
+                required
+                placeholder="Enter your email or phone number"
+              />
+            </InputGroup>
 
-          <InputGroup>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Enter your password"
-            />
-          </InputGroup>
+            <InputGroup>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                placeholder="Enter your password"
+              />
+            </InputGroup>
 
-          <Button type="submit" disabled={isLoading || !formData.emailOrPhone.trim() || !formData.password.trim()}>
-            {isLoading ? 'Signing In...' : 'Sign In'}
-          </Button>
-        </Form>
+            <Button type="submit" disabled={isLoading || !formData.emailOrPhone.trim() || !formData.password.trim()}>
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </Button>
+          </Form>
 
-        <LinkContainer>
-          Don't have an account? <StyledLink to="/register">Sign up</StyledLink>
-        </LinkContainer>
-      </LoginCard>
+          <LinkContainer>
+            Don't have an account? <StyledLink to="/register">Sign up</StyledLink>
+          </LinkContainer>
+        </LoginCard>
+      </MainContent>
+      <Footer />
     </PageContainer>
   );
 }

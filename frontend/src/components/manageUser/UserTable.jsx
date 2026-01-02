@@ -15,7 +15,7 @@ import {
   DropdownItem
 } from '../../pages/styles/adminUsers.styles.jsx';
 
-const UserTable = ({ usersData, isLoading }) => {
+const UserTable = ({ usersData, isLoading, currentUserRole }) => {
   const [openDropdowns, setOpenDropdowns] = useState({});
   const [notification, setNotification] = useState(null);
   const tableRef = useRef(null);
@@ -48,7 +48,8 @@ const UserTable = ({ usersData, isLoading }) => {
     (gender) => {
       if (!gender) return 'N/A';
       return gender.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
+    },
+    currentUserRole
   );
 
   const toggleDropdown = (userId) => {

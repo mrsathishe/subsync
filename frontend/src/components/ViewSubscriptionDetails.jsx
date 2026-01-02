@@ -1,5 +1,6 @@
 import React from 'react';
-import { useAdminSubscription } from '../hooks/useApi';
+import { useAdminSubscription, useAdminUsers } from '../hooks/useApi';
+import { useAuth } from '../contexts/AuthContext';
 
 // Tailwind CSS Components for AdminSubscriptionDetails
 const Modal = ({ children, onClick }) => (
@@ -205,8 +206,26 @@ const EmptyState = ({ children }) => (
   </div>
 );
 
-function AdminSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit }) {
+const PasswordField = ({ password, showPassword, onToggle }) => (
+  <div className="flex flex-col gap-2">
+    <div className="text-sm text-gray-900 break-all max-w-xs">
+      {showPassword ? (password || 'No password set') : '••••••••'}
+    </div>
+    <button
+      onClick={onToggle}
+      className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer bg-none border-none underline self-start"
+      type="button"
+    >
+      {showPassword ? '🙈 Hide' : '👁️ Show'}
+    </button>
+  </div>
+);
+
+function ViewSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit, usersData }) {
+  const { user } = useAuth();
   const { data, isLoading, error } = useAdminSubscription(subscriptionId);
+  const isAdmin = user?.role === 'admin';
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -233,6 +252,13 @@ function AdminSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit }) {
     }
   };
 
+  const getCreatorName = (createdById) => {
+    if (!createdById || !usersData?.users) return 'N/A';
+    
+    const creator = usersData.users.find(user => user.id === createdById);
+    return creator ? `${creator.first_name} ${creator.last_name}` : `User ID: ${createdById}`;
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -255,35 +281,39 @@ function AdminSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit }) {
               {/* Basic Information */}
               <DetailSection>
                 <SectionTitle>
-                  {getCategoryIcon(data.subscription?.category)} Basic Information
+                  {getCategoryIcon(data?.category)} Basic Information
                 </SectionTitle>
                 <DetailRow>
                   <DetailLabel>Service Name</DetailLabel>
-                  <DetailValue highlight>{data.subscription?.service_name}</DetailValue>
+                  <DetailValue highlight>{data?.service_name}</DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Category</DetailLabel>
-                  <DetailValue>{data.subscription?.category}</DetailValue>
+                  <DetailValue>{data?.category}</DetailValue>
                 </DetailRow>
-                <DetailRow>
-                  <DetailLabel>Owner</DetailLabel>
-                  <DetailValue>
-                    {data.subscription?.owner_type}
-                    {data.subscription?.owner_name && ` (${data.subscription.owner_name})`}
-                  </DetailValue>
-                </DetailRow>
+                {isAdmin && (
+                  <DetailRow>
+                    <DetailLabel>Owner</DetailLabel>
+                    <DetailValue>
+                      {data?.owner_type}
+                      {data?.owner_name && ` (${data.owner_name})`}
+                    </DetailValue>
+                  </DetailRow>
+                )}
                 <DetailRow>
                   <DetailLabel>Status</DetailLabel>
                   <DetailValue>
-                    <StatusBadge status={data.subscription?.status}>
-                      {data.subscription?.status}
+                    <StatusBadge status={data?.status}>
+                      {data?.status || 'Active'}
                     </StatusBadge>
                   </DetailValue>
                 </DetailRow>
-                <DetailRow isLast>
-                  <DetailLabel>Created By</DetailLabel>
-                  <DetailValue>{data.subscription?.created_by_name}</DetailValue>
-                </DetailRow>
+                {isAdmin && (
+                  <DetailRow isLast>
+                    <DetailLabel>Created By</DetailLabel>
+                    <DetailValue>{getCreatorName(data?.created_by)}</DetailValue>
+                  </DetailRow>
+                )}
               </DetailSection>
 
               {/* Login Information */}
@@ -291,11 +321,21 @@ function AdminSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit }) {
                 <SectionTitle>🔐 Login Information</SectionTitle>
                 <DetailRow>
                   <DetailLabel>Login Credential</DetailLabel>
-                  <DetailValue>{data.subscription?.login_username_phone}</DetailValue>
+                  <DetailValue>{data?.login_username_phone}</DetailValue>
+                </DetailRow>
+                <DetailRow>
+                  <DetailLabel>Password</DetailLabel>
+                  <DetailValue>
+                    <PasswordField 
+                      password={data?.password}
+                      showPassword={showPassword}
+                      onToggle={() => setShowPassword(!showPassword)}
+                    />
+                  </DetailValue>
                 </DetailRow>
                 <DetailRow isLast>
                   <DetailLabel>Password Hint</DetailLabel>
-                  <DetailValue>{data.subscription?.password_hint || 'Not provided'}</DetailValue>
+                  <DetailValue>{data?.password_hint || 'Not provided'}</DetailValue>
                 </DetailRow>
               </DetailSection>
 
@@ -304,109 +344,149 @@ function AdminSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit }) {
                 <SectionTitle>📅 Subscription Details</SectionTitle>
                 <DetailRow>
                   <DetailLabel>Amount</DetailLabel>
-                  <DetailValue highlight>{formatCurrency(data.subscription?.amount)}</DetailValue>
+                  <DetailValue highlight>{formatCurrency(data?.amount)}</DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Plan Type</DetailLabel>
-                  <DetailValue>{data.subscription?.plan_type}</DetailValue>
+                  <DetailValue>{data?.plan_type}</DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Purchased Date</DetailLabel>
-                  <DetailValue>{formatDate(data.subscription?.purchased_date)}</DetailValue>
+                  <DetailValue>{formatDate(data?.purchased_date)}</DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>Start Date</DetailLabel>
-                  <DetailValue>{formatDate(data.subscription?.start_date)}</DetailValue>
+                  <DetailValue>{formatDate(data?.start_date)}</DetailValue>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>End Date</DetailLabel>
-                  <DetailValue>{formatDate(data.subscription?.end_date)}</DetailValue>
+                  <DetailValue>{formatDate(data?.end_date)}</DetailValue>
                 </DetailRow>
-                <DetailRow>
-                  <DetailLabel>Purchased Via</DetailLabel>
-                  <DetailValue>{data.subscription?.purchased_via}</DetailValue>
-                </DetailRow>
-                <DetailRow isLast={!data.subscription?.next_purchase_date}>
-                  <DetailLabel>Auto Pay</DetailLabel>
-                  <DetailValue>{data.subscription?.auto_pay ? '✅ Enabled' : '❌ Disabled'}</DetailValue>
-                </DetailRow>
-                {data.subscription?.next_purchase_date && (
-                  <DetailRow isLast>
-                    <DetailLabel>Next Purchase</DetailLabel>
-                    <DetailValue>{formatDate(data.subscription?.next_purchase_date)}</DetailValue>
+                {isAdmin && (
+                  <DetailRow>
+                    <DetailLabel>Purchased Via</DetailLabel>
+                    <DetailValue>{data?.purchased_via}</DetailValue>
                   </DetailRow>
+                )}
+                {isAdmin && (
+                  <>
+                    <DetailRow>
+                      <DetailLabel>Auto Pay</DetailLabel>
+                      <DetailValue>{data?.auto_pay ? '✅ Enabled' : '❌ Disabled'}</DetailValue>
+                    </DetailRow>
+                    {data?.next_purchase_date && (
+                      <DetailRow>
+                        <DetailLabel>Next Purchase</DetailLabel>
+                        <DetailValue>{formatDate(data?.next_purchase_date)}</DetailValue>
+                      </DetailRow>
+                    )}
+                  </>
                 )}
               </DetailSection>
 
-              {/* Device & Usage */}
-              <DetailSection>
-                <SectionTitle>📱 Device & Usage</SectionTitle>
-                <DetailRow>
-                  <DetailLabel>Device Limit</DetailLabel>
-                  <DetailValue>{data.subscription?.device_limit}</DetailValue>
-                </DetailRow>
-                <DetailRow>
-                  <DetailLabel>Devices in Use</DetailLabel>
-                  <DetailValue>{data.subscription?.devices_in_use}</DetailValue>
-                </DetailRow>
-                <DetailRow isLast={!data.subscription?.ids_using?.length && !data.subscription?.comments}>
-                  <DetailLabel>Available Devices</DetailLabel>
-                  <DetailValue>
-                    {data.subscription?.device_limit - data.subscription?.devices_in_use}
-                  </DetailValue>
-                </DetailRow>
-                {data.subscription?.ids_using && data.subscription.ids_using.length > 0 && (
-                  <DetailRow isLast={!data.subscription?.comments}>
-                    <DetailLabel>IDs Using</DetailLabel>
-                    <DetailValue style={{ textAlign: 'left', maxWidth: '200px', wordBreak: 'break-word' }}>
-                      {data.subscription.ids_using.join(', ')}
+              {/* Device & Usage - Only for Admin */}
+              {isAdmin && (
+                <DetailSection>
+                  <SectionTitle>📱 Device & Usage</SectionTitle>
+                  <DetailRow>
+                    <DetailLabel>Device Limit</DetailLabel>
+                    <DetailValue>{data?.device_limit}</DetailValue>
+                  </DetailRow>
+                  <DetailRow>
+                    <DetailLabel>Devices in Use</DetailLabel>
+                    <DetailValue>{data?.devices_in_use}</DetailValue>
+                  </DetailRow>
+                  <DetailRow isLast={!data?.idsUsingDetails?.length && !data?.comments}>
+                    <DetailLabel>Available Devices</DetailLabel>
+                    <DetailValue>
+                      {(data?.device_limit || 0) - (data?.devices_in_use || 0)}
                     </DetailValue>
                   </DetailRow>
-                )}
-                {data.subscription?.comments && (
-                  <DetailRow isLast>
-                    <DetailLabel>Comments</DetailLabel>
-                    <DetailValue style={{ textAlign: 'left', maxWidth: '200px', wordBreak: 'break-word' }}>
-                      {data.subscription.comments}
-                    </DetailValue>
-                  </DetailRow>
-                )}
-              </DetailSection>
+                  {data?.idsUsingDetails && data.idsUsingDetails.length > 0 && (
+                    <DetailRow isLast={!data?.comments}>
+                      <DetailLabel>IDs Using</DetailLabel>
+                      <DetailValue style={{ textAlign: 'left', maxWidth: '200px', wordBreak: 'break-word' }}>
+                        {data.idsUsingDetails.map(user => 
+                          user.isCustom ? user.name : `${user.name} (${user.email})`
+                        ).join(', ')}
+                      </DetailValue>
+                    </DetailRow>
+                  )}
+                  {data?.comments && (
+                    <DetailRow isLast>
+                      <DetailLabel>Comments</DetailLabel>
+                      <DetailValue style={{ textAlign: 'left', maxWidth: '200px', wordBreak: 'break-word' }}>
+                        {data.comments}
+                      </DetailValue>
+                    </DetailRow>
+                  )}
+                </DetailSection>
+              )}
             </DetailGrid>
           ) : null}
 
-          {/* Sharing Details */}
-          {data?.subscription?.shared && (
+          {/* Payment Information - For regular users with shared subscriptions */}
+          {!isAdmin && data?.userPaymentInfo && (
+            <DetailSection className="mt-8">
+              <SectionTitle>💳 Payment Information</SectionTitle>
+              <DetailRow>
+                <DetailLabel>Payment Status</DetailLabel>
+                <DetailValue>
+                  <PaymentStatusBadge status={data.userPaymentInfo.paymentStatus}>
+                    {data.userPaymentInfo.paymentStatus.replace('_', ' ')}
+                  </PaymentStatusBadge>
+                </DetailValue>
+              </DetailRow>
+              <DetailRow>
+                <DetailLabel>Payment Required</DetailLabel>
+                <DetailValue>{data.userPaymentInfo.isPaid ? '✅ Paid' : '❌ Payment Due'}</DetailValue>
+              </DetailRow>
+              {data.userPaymentInfo.paymentDate && (
+                <DetailRow isLast>
+                  <DetailLabel>Payment Date</DetailLabel>
+                  <DetailValue>{formatDate(data.userPaymentInfo.paymentDate)}</DetailValue>
+                </DetailRow>
+              )}
+              {!data.userPaymentInfo.paymentDate && (
+                <DetailRow isLast>
+                  <DetailLabel>Payment Date</DetailLabel>
+                  <DetailValue>Not paid yet</DetailValue>
+                </DetailRow>
+              )}
+            </DetailSection>
+          )}
+
+          {/* Sharing Details - Only for Admin */}
+          {isAdmin && data?.isSharing && (
             <DetailSection className="mt-8">
               <SectionTitle>🤝 Sharing Information</SectionTitle>
               
               <DetailRow>
                 <DetailLabel>Total Shared Users</DetailLabel>
-                <DetailValue highlight>{data.subscription?.total_shared_users || 0}</DetailValue>
+                <DetailValue highlight>{data?.sharingDetails?.length || 0}</DetailValue>
               </DetailRow>
               
               <DetailRow>
                 <DetailLabel>Paid Users</DetailLabel>
-                <DetailValue>{data.subscription?.paid_shared_users || 0}</DetailValue>
+                <DetailValue>
+                  {data?.sharingDetails?.filter(user => user.paymentStatus === 'paid').length || 0}
+                </DetailValue>
               </DetailRow>
               
               <DetailRow isLast>
-                <DetailLabel>Shared Amount per User</DetailLabel>
+                <DetailLabel>Subscription Sharing</DetailLabel>
                 <DetailValue>
-                  {data.sharingDetails?.length > 0 
-                    ? formatCurrency(data.sharingDetails[0]?.shared_amount || 0)
-                    : 'N/A'
-                  }
+                  {data?.isSharing ? '✅ Enabled' : '❌ Disabled'}
                 </DetailValue>
               </DetailRow>
 
-              {data.sharingDetails && data.sharingDetails.length > 0 ? (
+              {data?.sharingDetails && data.sharingDetails.length > 0 ? (
                 <SharingTable>
                   <TableHeader>
                     <TableRow>
                       <TableHeaderCell>Name</TableHeaderCell>
                       <TableHeaderCell>Email</TableHeaderCell>
-                      <TableHeaderCell>Amount</TableHeaderCell>
+                      <TableHeaderCell>Type</TableHeaderCell>
                       <TableHeaderCell>Status</TableHeaderCell>
                       <TableHeaderCell>Payment Date</TableHeaderCell>
                     </TableRow>
@@ -415,23 +495,22 @@ function AdminSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit }) {
                     {data.sharingDetails.map((sharing, index) => (
                       <TableRow key={index}>
                         <TableCell>
-                          {sharing.first_name 
-                            ? `${sharing.first_name} ${sharing.last_name}`
-                            : sharing.non_registered_name || 'Unknown'
-                          }
-                          {sharing.first_name && <div className="text-xs text-gray-500 mt-1">Registered</div>}
+                          {sharing.name || 'Unknown'}
+                          {!sharing.isRegistered && <div className="text-xs text-gray-500 mt-1">Custom</div>}
                         </TableCell>
                         <TableCell>
-                          {sharing.email || sharing.non_registered_email || 'N/A'}
+                          {sharing.email || 'N/A'}
                         </TableCell>
-                        <TableCell>{formatCurrency(sharing.shared_amount)}</TableCell>
                         <TableCell>
-                          <PaymentStatusBadge status={sharing.payment_status}>
-                            {sharing.payment_status.replace('_', ' ')}
+                          {sharing.isRegistered ? 'Registered' : 'Custom'}
+                        </TableCell>
+                        <TableCell>
+                          <PaymentStatusBadge status={sharing.paymentStatus}>
+                            {sharing.paymentStatus.replace('_', ' ')}
                           </PaymentStatusBadge>
                         </TableCell>
                         <TableCell>
-                          {sharing.payment_date ? formatDate(sharing.payment_date) : 'N/A'}
+                          {sharing.paymentDate ? formatDate(sharing.paymentDate) : 'N/A'}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -442,14 +521,29 @@ function AdminSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit }) {
               )}
             </DetailSection>
           )}
+
+          {/* For regular users, show simple sharing status */}
+          {!isAdmin && data?.isSharing && (
+            <DetailSection className="mt-8">
+              <SectionTitle>🤝 Sharing Status</SectionTitle>
+              <DetailRow>
+                <DetailLabel>This subscription is shared</DetailLabel>
+                <DetailValue>✅ You have access</DetailValue>
+              </DetailRow>
+              <DetailRow isLast>
+                <DetailLabel>IDs Access</DetailLabel>
+                <DetailValue>{data?.ids_using ? '✅ You can use IDs' : '❌ No ID access'}</DetailValue>
+              </DetailRow>
+            </DetailSection>
+          )}
         </ModalBody>
 
         <ModalFooter>
           <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
-          {data?.subscription && (
-            <Button variant="primary" onClick={() => onEdit(data.subscription)}>
+          {isAdmin && data && (
+            <Button variant="primary" onClick={() => onEdit(data)}>
               ✏️ Edit Subscription
             </Button>
           )}
@@ -459,4 +553,4 @@ function AdminSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit }) {
   );
 }
 
-export default AdminSubscriptionDetails;
+export default ViewSubscriptionDetails;

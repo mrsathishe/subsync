@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAdminUsers } from '../hooks/useApi';
 import { adminAPI } from '../services/api';
 import { 
   BasicInformation, 
@@ -10,7 +9,7 @@ import {
 } from './adminsubscription';
 import { Form, Button, ErrorMessage, Modal, ModalContent, ModalHeader, ModalTitle, CloseButton, ModalBody, ModalFooter } from './styles.jsx';
 
-function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
+function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess, usersData }) {
   const [formData, setFormData] = useState({
     serviceName: '',
     category: '',
@@ -29,17 +28,16 @@ function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
     autoPay: false,
     deviceLimit: 1,
     devicesInUse: 0,
-    idsUsing: '',
+    idsUsing: false, // boolean for sharing status
     comments: '',
-    shared: false,
-    sharingDetails: []
+    isSharing: false,
+    sharingDetails: [],
+    idsUsingDetails: []
   });
 
   const [errors, setErrors] = useState({});
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { data: usersData } = useAdminUsers(1, 100); // Get users for sharing
 
   const isEditing = !!subscription;
 
@@ -63,10 +61,11 @@ function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
       autoPay: false,
       deviceLimit: 1,
       devicesInUse: 0,
-      idsUsing: '',
+      idsUsing: false, // boolean for sharing status
       comments: '',
-      shared: false,
-      sharingDetails: []
+      isSharing: false,
+      sharingDetails: [],
+      idsUsingDetails: []
     });
     setErrors({});
     setError('');
@@ -81,9 +80,6 @@ function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
 
   useEffect(() => {
     if (subscription) {
-      // Parse arrays and handle null values
-      const idsUsingArray = subscription.ids_using || [];
-      
       setFormData({
         serviceName: subscription.service_name || '',
         category: subscription.category || '',
@@ -102,10 +98,11 @@ function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
         autoPay: subscription.auto_pay || false,
         deviceLimit: subscription.device_limit || 1,
         devicesInUse: subscription.devices_in_use || 0,
-        idsUsing: idsUsingArray.join(', '),
+        idsUsing: subscription.ids_using || false, // Already boolean from API
         comments: subscription.comments || '',
-        shared: subscription.shared || false,
-        sharingDetails: [] // Will be loaded separately if needed
+        isSharing: subscription.isSharing || false, // Use isSharing field from API
+        sharingDetails: subscription.sharingDetails || [], // Use sharingDetails from API
+        idsUsingDetails: subscription.idsUsingDetails || [] // Use idsUsingDetails from API
       });
     } else {
       // Set default start date to today
@@ -196,8 +193,17 @@ function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess }) {
         deviceLimit: parseInt(formData.deviceLimit),
         devicesInUse: parseInt(formData.devicesInUse),
         customDurationValue: formData.customDurationValue ? parseInt(formData.customDurationValue) : null,
-        idsUsing: formData.idsUsing ? formData.idsUsing.split(',').map(s => s.trim()) : []
+        idsUsing: formData.idsUsing, // Use idsUsing boolean field
+        idsUsingDetails: (formData.idsUsingDetails || []).map(user => ({
+          userId: user.isCustom ? null : user.id,
+          name: user.name,
+          email: user.isCustom ? user.name : user.email,
+          isCustom: user.isCustom
+        }))
       };
+
+      // Remove unused fields (keep shared field in payload)
+      // delete submitData.shared; // Keep this field
 
       if (isEditing) {
         await adminAPI.updateAdminSubscription(subscription.id, submitData);

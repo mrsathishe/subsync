@@ -25,7 +25,8 @@ const StatLabel = ({ children }) => (
 );
 
 const StatsSection = ({ dashboardData, statsCards }) => {
-  if (!dashboardData) return null;
+  // Show stats if we have statsCards, regardless of dashboardData
+  if (!statsCards || statsCards.length === 0) return null;
 
   return (
     <DashboardGrid>

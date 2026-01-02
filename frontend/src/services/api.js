@@ -23,16 +23,14 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    if (error.response?.status === 401) {
       // Don't redirect if we're already on the login page to preserve error messages
       const currentPath = window.location.pathname;
       if (currentPath !== '/login' && currentPath !== '/register') {
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
-        // Add 1 minute delay before redirect
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 60000); // 1 minute = 60000ms
+        // Immediate redirect on 401
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);
