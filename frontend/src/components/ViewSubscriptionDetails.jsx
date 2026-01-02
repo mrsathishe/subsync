@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAdminSubscription, useAdminUsers } from '../hooks/useApi';
+import { useAdminSubscription } from '../hooks/useApi';
 import { useAuth } from '../contexts/AuthContext';
 
 // Tailwind CSS Components for AdminSubscriptionDetails

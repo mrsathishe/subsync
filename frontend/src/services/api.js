@@ -126,17 +126,6 @@ export const adminAPI = {
     return response.data;
   },
   
-  // Subscription management
-  getAllSubscriptions: async (page = 1, limit = 20) => {
-    const response = await apiClient.get(`/api/subscriptions/admin/subscriptions?page=${page}&limit=${limit}`);
-    return response.data;
-  },
-  
-  // Analytics
-  getAnalytics: async () => {
-    const response = await apiClient.get('/api/subscriptions/admin/analytics');
-    return response.data;
-  },
 
   // Admin Subscription Management
   getAdminSubscriptions: async (page = 1, limit = 20, filters = {}) => {

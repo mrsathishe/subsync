@@ -22,10 +22,6 @@ import {
   ContentArea
 } from './styles.jsx';
 
-const navigationItems = [
-  { path: '/subscriptions', label: 'Subscriptions', icon: '💳' },
-  { path: '/profile', label: 'Profile', icon: '👤' },
-];
 
 function Layout() {
   const navigate = useNavigate();

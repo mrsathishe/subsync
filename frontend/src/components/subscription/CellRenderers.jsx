@@ -50,7 +50,7 @@ export const ActionButton = ({ children, variant, ...props }) => {
   );
 };
 
-export const renderCellValue = (subscription, column, tableConfig, CategoryBadge, StatusBadge, ActionButtons, ActionButton) => {
+export const renderCellValue = (subscription, column, tableConfig) => {
   const value = tableConfig.formatValue(subscription, column);
   
   switch (column.type) {

@@ -5,6 +5,7 @@ import { resolve } from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/subsync/',  // For hosting at satz.co.in/subsync
   plugins: [
     react(),
     tailwindcss(),

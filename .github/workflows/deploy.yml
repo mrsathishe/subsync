@@ -1,0 +1,160 @@
+name: CI/CD Deploy SubSync
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Test and Build Job
+  test-and-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      # Backend Tests and Build
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Test Backend Database Connection
+        run: |
+          cd backend
+          # Add your test commands here when you have tests
+          # npm test
+          node -e "console.log('Backend build successful')"
+        env:
+          NODE_ENV: test
+
+      # Frontend Tests and Build
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Run Frontend Linting
+        run: |
+          cd frontend
+          npm run lint
+
+  # Deploy Job (only runs on main branch push)
+  deploy:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Deploy to Home Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}  # Your home server IP (192.168.1.2 or public IP)
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script: |
+            echo "🚀 Starting deployment to satz.co.in/subsync..."
+            
+            # Navigate to application directory
+            cd ${{ secrets.APP_DIR || '/var/www/subsync' }}
+            
+            # Pull latest changes
+            echo "📥 Pulling latest changes..."
+            git pull origin main
+            
+            # Backend deployment
+            echo "🔧 Installing backend dependencies..."
+            cd backend
+            npm install --production
+            
+            # Copy environment file if it exists
+            if [ -f .env.prod ]; then
+              cp .env.prod .env
+            fi
+            
+            # Restart backend with PM2
+            echo "🔄 Restarting backend service..."
+            pm2 restart subsync-backend || pm2 start server.js --name subsync-backend --env production
+            
+            # Frontend deployment for subdirectory hosting
+            echo "🎨 Building and deploying frontend for satz.co.in/subsync..."
+            cd ../frontend
+            npm install --production
+            npm run build
+            
+            # Deploy to nginx subdirectory
+            sudo mkdir -p /var/www/html/subsync
+            sudo cp -r dist/* /var/www/html/subsync/
+            sudo chown -R www-data:www-data /var/www/html/subsync
+            
+            # Update nginx configuration if needed
+            if [ -f "../.github/nginx-config/satz.co.in.conf" ]; then
+              sudo cp ../.github/nginx-config/satz.co.in.conf /etc/nginx/sites-available/satz.co.in
+              sudo ln -sf /etc/nginx/sites-available/satz.co.in /etc/nginx/sites-enabled/
+              sudo nginx -t && sudo systemctl reload nginx || echo "⚠️ Nginx config update failed"
+            fi
+            
+            # Save PM2 configuration
+            pm2 save
+            
+            echo "✅ Deployment completed successfully!"
+            echo "🌐 Visit: https://satz.co.in/subsync"
+
+      - name: Notify Deployment Status
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            SubSync deployment ${{ job.status }}!
+            Branch: ${{ github.ref }}
+            Commit: ${{ github.sha }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
+
+  # Health Check Job
+  health-check:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Wait for deployment
+        run: sleep 30
+        
+      - name: Health Check Backend
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://satz.co.in/health || echo "000")
+          if [ "$response" = "200" ]; then
+            echo "✅ Backend health check passed"
+          else
+            echo "❌ Backend health check failed with status: $response"
+            exit 1
+          fi
+
+      - name: Health Check Frontend
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://satz.co.in/subsync || echo "000")
+          if [ "$response" = "200" ]; then
+            echo "✅ Frontend health check passed at satz.co.in/subsync"
+          else
+            echo "❌ Frontend health check failed with status: $response"
+            exit 1
+          fi

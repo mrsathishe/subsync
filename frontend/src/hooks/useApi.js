@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { subscriptionAPI, userAPI, adminAPI, ottAPI } from '../services/api';
+import { userAPI, adminAPI } from '../services/api';
 
 // Global cache with request deduplication
 const globalCache = new Map();
@@ -138,29 +138,6 @@ const useMutation = (apiFunction, options = {}) => {
   return { mutate, loading, error };
 };
 
-// Subscription hooks
-export const useSubscriptionPlans = (category = null) => {
-  return useApiCall(
-    () => subscriptionAPI.getPlans(category),
-    [category]
-  );
-};
-
-export const useSubscriptionPlansByCategory = () => {
-  return useApiCall(subscriptionAPI.getPlansByCategory);
-};
-
-export const useMySubscriptions = () => {
-  return useApiCall(subscriptionAPI.getMySubscriptions);
-};
-
-export const useSubscribe = () => {
-  return useMutation(subscriptionAPI.subscribe);
-};
-
-export const useCancelSubscription = () => {
-  return useMutation(subscriptionAPI.cancelSubscription);
-};
 
 // User profile hooks
 export const useUserProfile = () => {
@@ -179,53 +156,7 @@ export const useAdminUsers = (page = 1, limit = 20) => {
   );
 };
 
-export const useUpdateUserRole = () => {
-  return useMutation(({ userId, role }) => adminAPI.updateUserRole(userId, role));
-};
 
-export const useUpdateUserStatus = () => {
-  return useMutation(({ userId, isActive }) => adminAPI.updateUserStatus(userId, isActive));
-};
-
-export const useSearchUsers = () => {
-  return useMutation(adminAPI.searchUsers);
-};
-
-export const useAdminPlans = () => {
-  return useApiCall(adminAPI.getAllPlans);
-};
-
-export const useCreatePlan = () => {
-  return useMutation(adminAPI.createPlan);
-};
-
-export const useUpdatePlan = () => {
-  return useMutation(({ planId, planData }) => adminAPI.updatePlan(planId, planData));
-};
-
-// OTT Details hooks
-export const useProviders = (type = null) => {
-  return useApiCall(
-    () => ottAPI.getProviders(type),
-    [type]
-  );
-};
-
-export const useOttDetails = (subscriptionId) => {
-  return useApiCall(
-    () => ottAPI.getOttDetails(subscriptionId),
-    [subscriptionId],
-    { enabled: !!subscriptionId }
-  );
-};
-
-export const useSaveOttDetails = () => {
-  return useMutation(ottAPI.saveOttDetails);
-};
-
-export const useDeleteOttDetails = () => {
-  return useMutation(ottAPI.deleteOttDetails);
-};
 
 // Admin Subscription Management hooks
 export const useAdminSubscriptions = (page = 1, limit = 20, filters = {}) => {
@@ -255,6 +186,11 @@ export const useDeleteAdminSubscription = () => {
   return useMutation(adminAPI.deleteAdminSubscription);
 };
 
-export const useUpdateSubscriptionSharing = () => {
-  return useMutation(({ id, sharingDetails }) => adminAPI.updateSubscriptionSharing(id, sharingDetails));
+export const useUpdateUserRole = () => {
+  return useMutation(({ userId, role }) => adminAPI.updateUserRole(userId, role));
 };
+
+export const useUpdateUserStatus = () => {
+  return useMutation(({ userId, isActive }) => adminAPI.updateUserStatus(userId, isActive));
+};
+
