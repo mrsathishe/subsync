@@ -56,7 +56,6 @@ if (process.env.NODE_ENV === 'production') {
 app.use('/api/auth', require('./backend/src/routes/auth'));
 app.use('/api/subscriptions', require('./backend/src/routes/subscriptions'));
 app.use('/api/users', require('./backend/src/routes/users'));
-app.use('/api/admin', require('./backend/src/routes/admin'));
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {

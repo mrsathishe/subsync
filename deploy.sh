@@ -156,7 +156,6 @@ main() {
     check_dependencies
     install_dependencies
     build_frontend
-    setup_database
     create_directories
     set_permissions
     stop_existing
