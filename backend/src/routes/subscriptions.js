@@ -366,6 +366,21 @@ router.get('/:id', authenticateToken, async (req, res) => {
       isRegistered: !!row.user_id
     }));
     
+    // Get user payment info if subscription is being shared
+    let userPaymentInfo = null;
+    
+    if (subscription.isSharing && sharingDetails.length > 0) {
+      // Find current user's payment info
+      const currentUserSharing = sharingDetails.find(user => user.userId === userId);
+      if (currentUserSharing) {
+        userPaymentInfo = {
+          isPaid: currentUserSharing.paymentStatus === 'paid',
+          paymentStatus: currentUserSharing.paymentStatus,
+          paymentDate: currentUserSharing.paymentDate
+        };
+      }
+    }
+    
     // Return response based on user role
     if (userRole === 'admin') {
       // Admin gets full response structure
@@ -373,33 +388,14 @@ router.get('/:id', authenticateToken, async (req, res) => {
         ...subscription,
         password: subscription.password_encrypted,
         idsUsingDetails,
-        sharingDetails
+        sharingDetails,
+        userPaymentInfo: userPaymentInfo
       });
     } else {
       // Regular users get simplified response
       const isUserInIdsUsing = idsUsingDetails.some(user => 
         user.userId === userId || user.userId === null // null for custom users
       );
-      
-      // Calculate shared amount if subscription is being shared
-      let displayAmount = subscription.amount;
-      let userPaymentInfo = null;
-      
-      if (subscription.isSharing && sharingDetails.length > 0) {
-        // Divide amount by number of sharing users (including the owner)
-        const totalSharingUsers = sharingDetails.length + 1; // +1 for the owner
-        displayAmount = (subscription.amount / totalSharingUsers).toFixed(2);
-        
-        // Find current user's payment info
-        const currentUserSharing = sharingDetails.find(user => user.userId === userId);
-        if (currentUserSharing) {
-          userPaymentInfo = {
-            isPaid: currentUserSharing.paymentStatus === 'paid',
-            paymentStatus: currentUserSharing.paymentStatus,
-            paymentDate: currentUserSharing.paymentDate
-          };
-        }
-      }
       
       res.json({
         id: subscription.id,
@@ -411,7 +407,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         purchased_date: subscription.purchased_date,
         start_date: subscription.start_date,
         end_date: subscription.end_date,
-        amount: parseFloat(displayAmount),
+        amount: subscription.amount, // Always send full amount
         plan_type: subscription.plan_type,
         custom_duration_value: subscription.custom_duration_value,
         custom_duration_unit: subscription.custom_duration_unit,
