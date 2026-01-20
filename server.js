@@ -56,6 +56,7 @@ if (process.env.NODE_ENV === 'production') {
 app.use('/api/auth', require('./backend/src/routes/auth'));
 app.use('/api/subscriptions', require('./backend/src/routes/subscriptions'));
 app.use('/api/users', require('./backend/src/routes/users'));
+app.use('/api/admin', require('./backend/src/routes/admin'));
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -77,6 +78,11 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Handle 404 for API routes first
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: 'API endpoint not found' });
+});
+
 // Serve React static files
 const frontendPath = path.join(__dirname, 'frontend', 'dist');
 app.use(express.static(frontendPath, {
@@ -91,13 +97,8 @@ app.use(express.static(frontendPath, {
   }
 }));
 
-// React Router fallback - serve index.html for all non-API routes
+// React Router fallback - serve index.html for all non-API routes (must be last)
 app.get('*', (req, res) => {
-  // Don't serve index.html for API routes
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ error: 'API endpoint not found' });
-  }
-  
   res.sendFile(path.join(frontendPath, 'index.html'), (err) => {
     if (err) {
       console.error('Error serving index.html:', err);
@@ -117,11 +118,6 @@ app.use((err, req, res, next) => {
     error: isDevelopment ? err.message : 'Internal server error',
     ...(isDevelopment && { stack: err.stack })
   });
-});
-
-// Handle 404 for API routes
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ error: 'API endpoint not found' });
 });
 
 // Graceful shutdown
