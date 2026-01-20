@@ -37,15 +37,11 @@ function SubscriptionsPage() {
   const { data: subscriptionsData, isLoading, refetch } = useAdminSubscriptions(
     currentPage, 
     pageSize, 
-    Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== ''))
+    Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== ''))
   );
   
   const deleteSubscriptionMutation = useDeleteAdminSubscription();
 
-  // Debug: Log the subscriptions data
-  console.log('Subscriptions data:', subscriptionsData);
-  console.log('Is loading:', isLoading);
-  console.log('User role:', user?.role);
 
   const categoryIcons = {
     'OTT': '📺',

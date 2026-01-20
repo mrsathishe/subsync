@@ -108,31 +108,6 @@ export const StatCard = ({ children }) => (
   </div>
 );
 
-export const StatIcon = ({ children, color }) => (
-  <div 
-    className="w-12 h-12 rounded-lg flex items-center justify-center mr-4 text-white text-xl"
-    style={{ backgroundColor: color }}
-  >
-    {children}
-  </div>
-);
-
-export const StatValue = ({ children }) => (
-  <div className="flex-1">
-    <div className="text-2xl font-bold text-gray-900">{children}</div>
-  </div>
-);
-
-export const StatLabel = ({ children }) => (
-  <div className="text-sm text-gray-500 mt-1">{children}</div>
-);
-
-export const ContentGrid = ({ children }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    {children}
-  </div>
-);
-
 export const Card = ({ children }) => (
   <div className="bg-white rounded-lg shadow-sm">
     {children}
@@ -145,15 +120,6 @@ export const CardHeader = ({ children }) => (
 
 export const CardTitle = ({ children }) => (
   <h3 className="text-lg font-semibold text-gray-900">{children}</h3>
-);
-
-export const ViewAllButton = ({ children, onClick }) => (
-  <button
-    onClick={onClick}
-    className="text-brand-600 hover:text-brand-700 text-sm font-medium"
-  >
-    {children}
-  </button>
 );
 
 export const CardContent = ({ children }) => (

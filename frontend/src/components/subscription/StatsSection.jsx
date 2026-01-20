@@ -30,8 +30,8 @@ const StatValue = ({ children }) => (
   <span className="text-lg font-bold text-brand-600">{children}</span>
 );
 
-const StatsSection = ({ dashboardData, statsCards }) => {
-  // Show stats if we have statsCards, regardless of dashboardData
+const StatsSection = ({ statsCards }) => {
+  // Show stats if we have statsCards
   if (!statsCards || statsCards.length === 0) return null;
 
   return (

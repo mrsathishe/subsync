@@ -17,12 +17,10 @@ const useApiCall = (apiFunction, dependencies = [], options = {}) => {
   const fetchData = useCallback(async () => {
     if (options.enabled === false) return;
     
-    console.log('fetchData called with cacheKey:', cacheKey);
     
     // Check cache first
     if (globalCache.has(cacheKey)) {
       const cachedData = globalCache.get(cacheKey);
-      console.log('Using cached data:', cachedData);
       if (isMountedRef.current) {
         setData(cachedData);
         setLoading(false);
@@ -32,18 +30,15 @@ const useApiCall = (apiFunction, dependencies = [], options = {}) => {
     
     // Check if request is already pending
     if (pendingRequests.has(cacheKey)) {
-      console.log('Request already pending, waiting...');
       try {
         const result = await pendingRequests.get(cacheKey);
         if (isMountedRef.current) {
-          console.log('Setting data from pending request:', result);
           setData(result);
           setLoading(false);
         }
         return;
       } catch (err) {
         if (isMountedRef.current) {
-          console.error('Setting error from pending request:', err);
           setError(err);
           setLoading(false);
         }
@@ -51,7 +46,6 @@ const useApiCall = (apiFunction, dependencies = [], options = {}) => {
       }
     }
     
-    console.log('Making new API request...');
     if (isMountedRef.current) {
       setLoading(true);
       setError(null);
@@ -59,7 +53,6 @@ const useApiCall = (apiFunction, dependencies = [], options = {}) => {
     
     // Create and store the pending request promise
     const requestPromise = apiFunction().then(result => {
-      console.log('API request successful:', result);
       globalCache.set(cacheKey, result);
       // Cache for 5 minutes
       setTimeout(() => {
@@ -68,7 +61,6 @@ const useApiCall = (apiFunction, dependencies = [], options = {}) => {
       pendingRequests.delete(cacheKey);
       return result;
     }).catch(err => {
-      console.error('API request failed:', err);
       pendingRequests.delete(cacheKey);
       throw err;
     });
@@ -78,13 +70,11 @@ const useApiCall = (apiFunction, dependencies = [], options = {}) => {
     try {
       const result = await requestPromise;
       if (isMountedRef.current) {
-        console.log('Setting data from new request:', result);
         setData(result);
         setLoading(false);
       }
     } catch (err) {
       if (isMountedRef.current) {
-        console.error('Setting error from new request:', err);
         setError(err);
         setLoading(false);
       }

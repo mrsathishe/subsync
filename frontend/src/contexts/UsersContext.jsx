@@ -36,7 +36,6 @@ export const UsersProvider = ({ children }) => {
       setUsersData(data);
     } catch (err) {
       setError(err);
-      console.error('Error fetching users:', err);
     } finally {
       setLoading(false);
     }

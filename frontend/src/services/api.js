@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Use relative paths in production, absolute URL in development
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -161,39 +162,6 @@ export const adminAPI = {
 
   updateSubscriptionSharing: async (id, sharingDetails) => {
     const response = await apiClient.put(`/api/subscriptions/${id}/sharing`, { sharingDetails });
-    return response.data;
-  },
-};
-
-export const ottAPI = {
-  getProviders: async (type = null) => {
-    let url = '/api/ott/providers';
-    if (type) {
-      url += `?type=${encodeURIComponent(type)}`;
-    }
-    const response = await apiClient.get(url);
-    return response.data;
-  },
-  
-  getOttDetails: async (subscriptionId) => {
-    const response = await apiClient.get(`/api/ott/ott-details/${subscriptionId}`);
-    return response.data;
-  },
-  
-  saveOttDetails: async (ottDetailsData) => {
-    const response = await apiClient.post('/api/ott/ott-details', ottDetailsData);
-    return response.data;
-  },
-  
-  deleteOttDetails: async (subscriptionId) => {
-    const response = await apiClient.delete(`/api/ott/ott-details/${subscriptionId}`);
-    return response.data;
-  },
-};
-
-export const healthAPI = {
-  check: async () => {
-    const response = await apiClient.get('/health');
     return response.data;
   },
 };
