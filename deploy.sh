@@ -52,12 +52,16 @@ install_dependencies() {
     
     # Frontend dependencies
     cd frontend
+    rm -rf node_modules package-lock.json
+    npm cache clean --force
     npm install
     cd ..
     
     # Backend dependencies (if separate package.json exists)
     if [ -f "backend/package.json" ]; then
         cd backend
+        rm -rf node_modules package-lock.json
+        npm cache clean --force
         npm install --production
         cd ..
     fi
