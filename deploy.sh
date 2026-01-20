@@ -43,6 +43,9 @@ check_dependencies() {
 # Install all dependencies
 install_dependencies() {
     print_status "Installing dependencies..."
+
+    rm -rf node_modules package-lock.json
+    npm cache clean --force
     
     # Root dependencies
     npm install --production=false
