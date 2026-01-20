@@ -1,7 +1,34 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const FiltersContainer = ({ children }) => (
-  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
+    {children}
+  </div>
+);
+
+const FiltersHeader = ({ isExpanded, onToggle, hasActiveFilters }) => (
+  <div className="flex items-center justify-between p-4 border-b border-gray-200 cursor-pointer" onClick={onToggle}>
+    <div className="flex items-center gap-3">
+      <span className="text-lg font-semibold text-gray-800">Filters & Search</span>
+      {hasActiveFilters && (
+        <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+          Active
+        </span>
+      )}
+    </div>
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-gray-500">
+        {isExpanded ? 'Hide' : 'Show'} Filters
+      </span>
+      <span className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+        ▼
+      </span>
+    </div>
+  </div>
+);
+
+const FiltersContent = ({ children }) => (
+  <div className="p-6">
     {children}
   </div>
 );
@@ -62,40 +89,55 @@ const FiltersSection = ({
   onFilterChange, 
   onClearFilters 
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  // Check if any filters have values
+  const hasActiveFilters = Object.values(filters).some(value => value !== '');
+
   return (
     <FiltersContainer>
-      <FiltersGrid>
-        {filterConfig.map((filter) => (
-          <FilterGroup key={filter.key}>
-            <FilterLabel>{filter.label}</FilterLabel>
-            {filter.type === 'input' ? (
-              <FilterInput
-                type="text"
-                placeholder={filter.placeholder}
-                value={filters[filter.key]}
-                onChange={(e) => onFilterChange(filter.key, e.target.value)}
-              />
-            ) : (
-              <FilterSelect
-                value={filters[filter.key]}
-                onChange={(e) => onFilterChange(filter.key, e.target.value)}
-              >
-                {filter.options.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </FilterSelect>
-            )}
-          </FilterGroup>
-        ))}
-      </FiltersGrid>
+      <FiltersHeader
+        isExpanded={isExpanded}
+        onToggle={() => setIsExpanded(!isExpanded)}
+        hasActiveFilters={hasActiveFilters}
+      />
       
-      <div className="flex gap-3">
-        <Button variant="secondary" onClick={onClearFilters}>
-          Clear Filters
-        </Button>
-      </div>
+      {isExpanded && (
+        <FiltersContent>
+          <FiltersGrid>
+            {filterConfig.map((filter) => (
+              <FilterGroup key={filter.key}>
+                <FilterLabel>{filter.label}</FilterLabel>
+                {filter.type === 'input' ? (
+                  <FilterInput
+                    type="text"
+                    placeholder={filter.placeholder}
+                    value={filters[filter.key]}
+                    onChange={(e) => onFilterChange(filter.key, e.target.value)}
+                  />
+                ) : (
+                  <FilterSelect
+                    value={filters[filter.key]}
+                    onChange={(e) => onFilterChange(filter.key, e.target.value)}
+                  >
+                    {filter.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </FilterSelect>
+                )}
+              </FilterGroup>
+            ))}
+          </FiltersGrid>
+          
+          <div className="flex gap-3">
+            <Button variant="secondary" onClick={onClearFilters}>
+              Clear Filters
+            </Button>
+          </div>
+        </FiltersContent>
+      )}
     </FiltersContainer>
   );
 };

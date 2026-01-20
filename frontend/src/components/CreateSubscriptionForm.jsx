@@ -31,6 +31,7 @@ function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess, user
     idsUsing: false, // boolean for sharing status
     comments: '',
     isSharing: false,
+    includeMe: false,
     sharingDetails: [],
     idsUsingDetails: []
   });
@@ -64,6 +65,7 @@ function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess, user
       idsUsing: false, // boolean for sharing status
       comments: '',
       isSharing: false,
+      includeMe: false,
       sharingDetails: [],
       idsUsingDetails: []
     });
@@ -101,6 +103,7 @@ function CreateSubscriptionForm({ isOpen, onClose, subscription, onSuccess, user
         idsUsing: subscription.ids_using || false, // Already boolean from API
         comments: subscription.comments || '',
         isSharing: subscription.isSharing || false, // Use isSharing field from API
+        includeMe: subscription.includeMe || false, // Add includeMe field
         sharingDetails: subscription.sharingDetails || [], // Use sharingDetails from API
         idsUsingDetails: subscription.idsUsingDetails || [] // Use idsUsingDetails from API
       });

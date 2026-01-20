@@ -65,6 +65,18 @@ export const getUserTableConfig = (formatDate, formatGender, currentUserRole) =>
 
 export const getSubscriptionStatsCards = (subscriptionsData, formatCurrency, userRole) => {
   if (!subscriptionsData?.subscriptions) {
+    // For non-admin users, show only total subscriptions
+    if (userRole !== 'admin') {
+      return [
+        {
+          icon: "📊",
+          value: 0,
+          label: "Total Subscriptions"
+        }
+      ];
+    }
+    
+    // For admin users, show all stats
     return [
       {
         icon: "📊",
@@ -87,17 +99,32 @@ export const getSubscriptionStatsCards = (subscriptionsData, formatCurrency, use
   const subscriptions = subscriptionsData.subscriptions;
   const totalSubscriptions = subscriptions.length;
   
-  // For regular users: check ids_using boolean
-  // For admin users: check idsUsingDetails array or ids_using boolean
+  // For non-admin users, show only total subscriptions
+  if (userRole !== 'admin') {
+    return [
+      {
+        icon: "📊",
+        value: totalSubscriptions,
+        label: "Total Subscriptions"
+      }
+    ];
+  }
+  
+  // For admin users, calculate and show all stats
   const idsUsingCount = subscriptions.filter(sub => {
-    if (userRole === 'admin') {
-      return sub.ids_using || (sub.idsUsingDetails && sub.idsUsingDetails.length > 0);
-    } else {
-      return sub.ids_using === true;
-    }
+    return sub.ids_using || (sub.idsUsingDetails && sub.idsUsingDetails.length > 0);
   }).length;
   
-  const sharingCount = subscriptions.filter(sub => sub.isSharing === true).length;
+  // Count subscriptions that are actually shared (have sharingDetails and includeMe is true, or have idsUsingDetails)
+  const sharingCount = subscriptions.filter(sub => {
+    if (sub.isSharing && sub.sharingDetails && sub.sharingDetails.length > 0) {
+      return true; // Has sharing details, so it's actually shared
+    }
+    if (sub.ids_using && sub.idsUsingDetails && sub.idsUsingDetails.length > 0) {
+      return true; // Has IDs using details, so it's actually shared
+    }
+    return false;
+  }).length;
 
   return [
     {
@@ -218,9 +245,13 @@ export const getSubscriptionTableConfig = (formatCurrency, formatDate, categoryI
         return formatDate(subscription[column.key]);
       
       case 'shared':
+        const sharedUsersCount = subscription.sharingDetails ? subscription.sharingDetails.length : 0;
+        const includesMeCount = subscription.includeMe ? 1 : 0;
+        const totalUsersCount = sharedUsersCount + includesMeCount;
+        
         return {
           shared: subscription.isSharing || subscription.ids_using,
-          totalUsers: subscription.total_shared_users || (subscription.idsUsingDetails ? subscription.idsUsingDetails.length : 0)
+          totalUsers: totalUsersCount > 0 ? totalUsersCount : (subscription.total_shared_users || (subscription.idsUsingDetails ? subscription.idsUsingDetails.length : 0))
         };
       
       case 'actions':

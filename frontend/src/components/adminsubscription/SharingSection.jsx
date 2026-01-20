@@ -26,8 +26,29 @@ const SharingSection = ({
 
       {formData.isSharing && (
         <SharingContainer>
+          <CheckboxContainer style={{ marginBottom: '1rem' }}>
+            <Checkbox
+              id="includeMe"
+              name="includeMe"
+              type="checkbox"
+              checked={formData.includeMe || false}
+              onChange={onChange}
+            />
+            <Label htmlFor="includeMe">Include me</Label>
+          </CheckboxContainer>
+
           <div style={{ marginBottom: '1rem' }}>
             <strong>Shared Users</strong>
+            {formData.includeMe && formData.sharingDetails.length > 0 && (
+              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                Total users: {formData.sharingDetails.length + 1} (including admin)
+              </div>
+            )}
+            {!formData.includeMe && formData.sharingDetails.length > 0 && (
+              <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
+                Total users: {formData.sharingDetails.length} (admin not included)
+              </div>
+            )}
           </div>
           
           {formData.sharingDetails.map((person, index) => (

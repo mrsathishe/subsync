@@ -333,10 +333,13 @@ function ViewSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit, user
                     />
                   </DetailValue>
                 </DetailRow>
-                <DetailRow isLast>
-                  <DetailLabel>Password Hint</DetailLabel>
-                  <DetailValue>{data?.password_hint || 'Not provided'}</DetailValue>
-                </DetailRow>
+                {
+                  isAdmin &&
+                  <DetailRow isLast>
+                    <DetailLabel>Password Hint</DetailLabel>
+                    <DetailValue>{data?.password_hint || 'Not provided'}</DetailValue>
+                  </DetailRow>
+                }
               </DetailSection>
 
               {/* Subscription Details */}
@@ -529,10 +532,6 @@ function ViewSubscriptionDetails({ subscriptionId, isOpen, onClose, onEdit, user
               <DetailRow>
                 <DetailLabel>This subscription is shared</DetailLabel>
                 <DetailValue>✅ You have access</DetailValue>
-              </DetailRow>
-              <DetailRow isLast>
-                <DetailLabel>IDs Access</DetailLabel>
-                <DetailValue>{data?.ids_using ? '✅ You can use IDs' : '❌ No ID access'}</DetailValue>
               </DetailRow>
             </DetailSection>
           )}

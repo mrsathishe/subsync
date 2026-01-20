@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useUsers } from '../contexts/UsersContext';
 import CreateSubscriptionForm from '../components/CreateSubscriptionForm';
 import ViewSubscriptionDetails from '../components/ViewSubscriptionDetails';
+import ConfirmationModal from '../components/ConfirmationModal';
 import SubscriptionsPageHeader from '../components/subscription/PageHeader';
 import StatsSection from '../components/subscription/StatsSection';
 import FiltersSection from '../components/subscription/FiltersSection';
@@ -29,6 +30,7 @@ function SubscriptionsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState(null);
   const [viewingSubscription, setViewingSubscription] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, id: null, serviceName: '' });
 
   const pageSize = 20;
   
@@ -74,15 +76,22 @@ function SubscriptionsPage() {
     setEditingSubscription(subscription);
   };
 
-  const handleDelete = async (id, serviceName) => {
-    if (window.confirm(`Are you sure you want to delete "${serviceName}"? This action cannot be undone.`)) {
-      try {
-        await deleteSubscriptionMutation.mutateAsync(id);
-        refetch();
-      } catch (error) {
-        console.error('Error deleting subscription:', error);
-      }
+  const handleDelete = (id, serviceName) => {
+    setDeleteConfirmation({ isOpen: true, id, serviceName });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteSubscriptionMutation.mutate(deleteConfirmation.id);
+      refetch();
+      setDeleteConfirmation({ isOpen: false, id: null, serviceName: '' });
+    } catch (error) {
+      console.error('Error deleting subscription:', error);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmation({ isOpen: false, id: null, serviceName: '' });
   };
 
   // Get data objects from helper functions
@@ -217,6 +226,17 @@ function SubscriptionsPage() {
           setEditingSubscription(subscription);
         }}
         usersData={usersData}
+      />
+
+      <ConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete Subscription"
+        message={`Are you sure you want to delete "${deleteConfirmation.serviceName}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="danger"
       />
     </PageContainer>
   );

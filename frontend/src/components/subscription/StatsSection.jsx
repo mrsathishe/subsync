@@ -1,27 +1,33 @@
 import React from 'react';
 
 const DashboardGrid = ({ children }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
     {children}
   </div>
 );
 
 const StatCard = ({ children }) => (
-  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 text-center">
+  <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg shadow-sm border border-gray-200 min-w-fit">
     {children}
   </div>
 );
 
 const StatIcon = ({ children }) => (
-  <div className="text-3xl mb-2">{children}</div>
+  <span className="text-xl">{children}</span>
 );
 
-const StatValue = ({ children }) => (
-  <div className="text-2xl font-bold text-brand-600 mb-1">{children}</div>
+const StatContent = ({ children }) => (
+  <div className="flex items-center gap-2">
+    {children}
+  </div>
 );
 
 const StatLabel = ({ children }) => (
-  <div className="text-gray-600 text-sm">{children}</div>
+  <span className="text-sm font-medium text-gray-700">{children}</span>
+);
+
+const StatValue = ({ children }) => (
+  <span className="text-lg font-bold text-brand-600">{children}</span>
 );
 
 const StatsSection = ({ dashboardData, statsCards }) => {
@@ -33,8 +39,10 @@ const StatsSection = ({ dashboardData, statsCards }) => {
       {statsCards.map((stat, index) => (
         <StatCard key={index}>
           <StatIcon>{stat.icon}</StatIcon>
-          <StatValue>{stat.value}</StatValue>
-          <StatLabel>{stat.label}</StatLabel>
+          <StatContent>
+            <StatLabel>{stat.label}:</StatLabel>
+            <StatValue>{stat.value}</StatValue>
+          </StatContent>
         </StatCard>
       ))}
     </DashboardGrid>
