@@ -3,10 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
     "start:prod": "ENV_FILE=.env.prod NODE_ENV=production node server.js",
     "dev": "ENV_FILE=.env nodemon server.js",
-    "dev:local": "ENV_FILE=.env nodemon server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

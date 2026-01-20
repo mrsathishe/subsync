@@ -73,16 +73,18 @@ The backend is a complete Express.js API server with PostgreSQL database integra
 The backend connects to a Supabase PostgreSQL database with advanced features:
 
 **Schema Design:**
-- `users` - User authentication and profiles with role-based access
-- `subscription_plans` - Available subscription plans with JSONB features
-- `user_subscriptions` - Active user subscriptions with lifecycle management
-- `payments` - Payment transaction history
+- `users` - User authentication and profiles with role-based access (email, password, name, role)
+- `subscriptions` - Main subscription records with sharing capabilities
+- `subscription_sharing` - Users sharing subscription costs with payment tracking
+- `ids_sharing_users` - Users sharing subscription login credentials
+- `payment_details` - Automatic payment tracking triggered by subscription_sharing.payment_date
 
 **Advanced Features:**
-- PostgreSQL indexes for performance optimization
-- Automatic `updated_at` timestamp triggers
-- Foreign key constraints with CASCADE deletes
-- JSONB fields for flexible feature storage
+- PostgreSQL indexes for performance optimization on common queries
+- Automatic `updated_at` timestamp triggers across all tables
+- Foreign key constraints with CASCADE deletes for data integrity
+- Automatic payment record creation via database triggers
+- Role-based data access control (admin vs user views)
 
 Database connection details are stored in `.env` file in the backend directory.
 
@@ -91,10 +93,14 @@ Database connection details are stored in `.env` file in the backend directory.
 ### Backend Development
 ```bash
 cd backend
-npm install                    # Install dependencies
-npm run dev                   # Start development server with auto-reload
-npm start                     # Start production server
-node scripts/setup-db.js     # Initialize database schema and sample data
+npm install                           # Install dependencies
+npm run dev                          # Start development server with auto-reload (uses .env)
+npm run dev:local                    # Alternative dev command (uses .env)  
+npm start                            # Start production server
+npm run start:prod                   # Start with production config (.env.prod)
+node scripts/setup-db.js            # Initialize database schema and sample data
+node scripts/fix-schema.js          # Fix database schema issues and add constraints
+node scripts/add-payment-details.js # Add payment_details table and triggers
 ```
 
 ### Frontend Development
@@ -108,11 +114,24 @@ npm run preview              # Preview production build locally
 ```
 
 ### Database Operations
-The database setup script (`scripts/setup-db.js`) will:
+The database setup and migration scripts provide:
+
+**Initial Setup** (`scripts/setup-db.js`):
 - Test database connection
 - Create all required tables
 - Insert sample subscription plans
 - Verify table creation
+
+**Schema Fixes** (`scripts/fix-schema.js`):
+- Add missing foreign key constraints
+- Create performance indexes
+- Add updated_at triggers
+- Implement data validation constraints
+
+**Payment System** (`scripts/add-payment-details.js`):
+- Create payment_details table
+- Set up automatic triggers for payment tracking
+- Add indexes for payment queries
 
 ## Project Structure
 
@@ -121,15 +140,22 @@ subsync/
 ├── backend/                   # Complete Express.js API server
 │   ├── server.js             # Main application entry point
 │   ├── src/
-│   │   ├── config/database.js    # PostgreSQL connection config
+│   │   ├── config/database.js    # PostgreSQL connection config with SSL
 │   │   ├── middleware/auth.js    # JWT authentication middleware
 │   │   └── routes/               # API route handlers
 │   │       ├── auth.js           # Registration/login endpoints
-│   │       ├── subscriptions.js # Subscription management
+│   │       ├── subscriptions.js # Subscription and sharing management
 │   │       └── users.js          # User profile operations
-│   ├── database/schema.sql   # Complete database schema
-│   ├── scripts/setup-db.js  # Database initialization script
-│   └── .env                  # Database credentials and JWT config
+│   ├── database/             # Database schema and migrations
+│   │   ├── schema.sql            # Original database schema
+│   │   ├── fix_schema_issues.sql # Schema fixes and constraints
+│   │   └── add_payment_details_table.sql # Payment tracking system
+│   ├── scripts/              # Database management scripts
+│   │   ├── setup-db.js           # Initial database setup
+│   │   ├── fix-schema.js         # Apply schema fixes
+│   │   └── add-payment-details.js # Add payment tracking
+│   ├── .env                  # Development database credentials
+│   └── .env.prod             # Production database configuration
 ├── frontend/                 # Modern React web application
 │   ├── src/
 │   │   ├── components/           # Reusable UI components
@@ -151,7 +177,7 @@ subsync/
 
 ## API Architecture
 
-The backend implements a RESTful API with three main domains:
+The backend implements a RESTful API with role-based access control:
 
 1. **Authentication** (`/api/auth/*`)
    - User registration with bcrypt password hashing
@@ -159,9 +185,10 @@ The backend implements a RESTful API with three main domains:
    - 24-hour token expiration
 
 2. **Subscription Management** (`/api/subscriptions/*`)
-   - Public endpoint for viewing available plans
-   - Authenticated endpoints for user subscriptions
-   - Subscription lifecycle management (create, cancel)
+   - Role-based data filtering (admin sees all, users see shared only)
+   - Subscription sharing with payment tracking
+   - IDs sharing for credential access
+   - Full subscription amount always returned (not divided)
 
 3. **User Management** (`/api/users/*`)
    - User profile retrieval and updates
@@ -171,6 +198,12 @@ The backend implements a RESTful API with three main domains:
    - User management with role updates
    - Subscription plan administration
    - Analytics and reporting
+
+### Key API Features
+- **Automatic Payment Tracking**: payment_details records created when subscription_sharing.payment_date is set
+- **Subscription Sharing**: Cost sharing between multiple users with payment status tracking  
+- **IDs Sharing**: Login credential sharing with custom and registered users
+- **Role-based Access**: Different data views for admin vs regular users
 
 ## Development Workflow
 
@@ -225,18 +258,40 @@ The frontend uses Vite with:
 
 ## Environment Configuration
 
-The backend requires these environment variables in `backend/.env`:
-- Database connection details (Supabase PostgreSQL)
-- JWT secret key for token signing
-- PORT and NODE_ENV settings
+The backend supports multiple environment configurations:
+
+**Development** (`backend/.env`):
+- Local database connection
+- Development JWT secret
+- Debug logging enabled
+
+**Production** (`backend/.env.prod`):
+- Production database configuration
+- Secure JWT secret
+- Production optimizations
+- SSL database connection
+
+Required environment variables:
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` - Database connection
+- `JWT_SECRET` - Token signing key
+- `NODE_ENV` - Environment mode (development/production)
+- `PORT` - Server port (default 3000)
 
 ## Development Status
 
-- ✅ **Backend**: Fully implemented with database integration
-- ✅ **Frontend**: Modern React application with complete UI and functionality
+- ✅ **Backend**: Fully implemented with payment tracking system
+- ✅ **Frontend**: Complete React application with enhanced sharing UI
+- ✅ **Database**: Production-ready schema with automated triggers
 - ⏳ **Mobile UI**: Directory structure only
 - ❌ **Testing**: No test framework currently implemented
 - ❌ **CI/CD**: No automated deployment pipeline
+
+### Recent Enhancements
+- **Payment Tracking System**: Automatic payment_details creation via database triggers
+- **Enhanced Sharing Features**: Subscription cost sharing with payment status tracking
+- **Database Schema Improvements**: Foreign keys, indexes, constraints, and triggers
+- **UI/UX Improvements**: Collapsible filters, confirmation modals, enhanced stats display
+- **Role-based Access Control**: Different data views for admin vs regular users
 
 ### Missing Development Infrastructure
 - **Testing Framework**: No Jest, Vitest, or other testing setup
@@ -250,4 +305,11 @@ When working on mobile components, consult the business requirements in the `doc
 
 ## Testing the Backend
 
-The system includes a working test user and sample subscription plans. Use curl commands or API testing tools to interact with endpoints at `http://localhost:3000` when the development server is running.
+The system includes a working backend with comprehensive API endpoints. To test:
+
+1. **Start the backend**: `npm run dev` (uses .env) or `npm run start:prod` (uses .env.prod)
+2. **Test endpoints**: Use curl commands or API testing tools at `http://localhost:3000`
+3. **Database migrations**: Run schema fixes and payment system setup scripts as needed
+4. **Payment tracking**: Test by setting payment_date in subscription_sharing records
+
+The payment_details table will automatically track payments when subscription_sharing.payment_date is set via database triggers.

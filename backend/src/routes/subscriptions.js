@@ -455,8 +455,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       comments,
       idsUsingDetails,
       isSharing,
-      sharingDetails,
-      selectedUsers
+      sharingDetails
     } = req.body;
     
     const adminUserId = req.user.userId;
@@ -613,8 +612,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
       comments,
       idsUsingDetails,
       isSharing,
-      sharingDetails,
-      selectedUsers
+      sharingDetails
     } = req.body;
     
     // If updating, check if subscription exists

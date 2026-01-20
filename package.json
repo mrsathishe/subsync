@@ -1,6 +1,36 @@
 {
+  "name": "subsync-production",
+  "version": "1.0.0",
+  "description": "SubSync Production Server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "NODE_ENV=development nodemon server.js",
+    "build": "cd frontend && npm run build",
+    "install-deps": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "deploy": "npm run build && npm start",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:delete": "pm2 delete ecosystem.config.js",
+    "pm2:logs": "pm2 logs subsync",
+    "pm2:monitor": "pm2 monit"
+  },
   "dependencies": {
+    "express": "^5.2.1",
+    "cors": "^2.8.5",
+    "helmet": "^8.1.0",
+    "express-rate-limit": "^8.2.1",
+    "morgan": "^1.10.1",
     "dotenv": "^17.2.3",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "bcryptjs": "^3.0.3",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
