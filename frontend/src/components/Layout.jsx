@@ -2,11 +2,11 @@ import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Footer from './Footer';
+import Logo from './Logo';
 import {
   LayoutContainer,
   Sidebar,
   SidebarHeader,
-  Logo,
   Navigation,
   NavItem,
   NavItemIcon,
@@ -58,7 +58,7 @@ function Layout() {
     <LayoutContainer>
       <Sidebar>
         <SidebarHeader>
-          <Logo>SubSync</Logo>
+          <Logo size="medium" variant="sidebar" />
         </SidebarHeader>
         
         <Navigation>

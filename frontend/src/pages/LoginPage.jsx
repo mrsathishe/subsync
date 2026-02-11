@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Footer from '../components/Footer';
+import Logo from '../components/Logo';
 
 // Tailwind CSS Components
 const PageContainer = ({ children }) => (
@@ -22,7 +23,7 @@ const LoginCard = ({ children }) => (
   </div>
 );
 
-const Logo = ({ children }) => (
+const LogoComponent = ({ children }) => (
   <h1 className="text-center text-3xl font-bold text-brand-600 mb-6">
     {children}
   </h1>
@@ -130,7 +131,7 @@ function LoginPage() {
     <PageContainer>
       <MainContent>
         <LoginCard>
-          <Logo>SubSync</Logo>
+          <Logo size="xl" variant="auth" />
           
           {error && <ErrorMessage>{error}</ErrorMessage>}
           

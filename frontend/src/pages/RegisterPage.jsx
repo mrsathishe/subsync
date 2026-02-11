@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Footer from '../components/Footer';
+import Logo from '../components/Logo';
 import {
   PageContainer,
   AuthMainContent,
@@ -90,7 +91,7 @@ function RegisterPage() {
     <PageContainer>
       <AuthMainContent>
         <AuthCard>
-        <AuthLogo>SubSync</AuthLogo>
+        <Logo size="xl" variant="auth" />
         
         {error && <AuthErrorMessage>{error}</AuthErrorMessage>}
         
