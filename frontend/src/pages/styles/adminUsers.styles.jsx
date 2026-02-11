@@ -266,3 +266,33 @@ export const DropdownItem = ({ children, onClick, icon }) => (
     <span>{children}</span>
   </button>
 );
+
+// Icon Button Components with Tooltip
+export const ActionIconsContainer = ({ children }) => (
+  <div className="flex gap-2 items-center justify-center">
+    {children}
+  </div>
+);
+
+export const IconButton = ({ children, onClick, title, variant = 'default' }) => {
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'status':
+        return 'text-blue-600 hover:text-blue-700 hover:bg-blue-50';
+      case 'role':
+        return 'text-purple-600 hover:text-purple-700 hover:bg-purple-50';
+      default:
+        return 'text-gray-600 hover:text-gray-700 hover:bg-gray-50';
+    }
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors ${getVariantStyles()}`}
+    >
+      {children}
+    </button>
+  );
+};

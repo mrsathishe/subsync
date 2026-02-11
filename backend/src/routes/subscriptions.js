@@ -434,6 +434,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const {
+      id,
       serviceName,
       category,
       ownerType,
@@ -459,12 +460,39 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
     } = req.body;
     
     const adminUserId = req.user.userId;
+    const isUpdate = id && id !== '';
+    
+    // If updating, check if subscription exists
+    if (isUpdate) {
+      const existingResult = await db.query(
+        'SELECT id FROM subscriptions WHERE id = $1',
+        [id]
+      );
+      
+      if (existingResult.rows.length === 0) {
+        return res.status(404).json({ error: 'Subscription not found' });
+      }
+    }
     
     // Calculate end date and next purchase date
     let endDate, nextPurchaseDate;
-    const finalStartDate = startDate || new Date();
-    endDate = calculateEndDate(finalStartDate, planType, customDurationValue, customDurationUnit);
-    nextPurchaseDate = calculateNextPurchaseDate(endDate, autoPay);
+    if (isUpdate) {
+      // For updates, only recalculate if relevant fields are provided
+      if (startDate || planType || customDurationValue || customDurationUnit) {
+        const current = await db.query('SELECT * FROM subscriptions WHERE id = $1', [id]);
+        const currentSub = current.rows[0];
+        const finalStartDate = startDate || currentSub.start_date;
+        endDate = calculateEndDate(finalStartDate, planType || currentSub.plan_type, 
+          customDurationValue || currentSub.custom_duration_value, 
+          customDurationUnit || currentSub.custom_duration_unit);
+        nextPurchaseDate = calculateNextPurchaseDate(endDate, autoPay !== undefined ? autoPay : currentSub.auto_pay);
+      }
+    } else {
+      // For new subscriptions
+      const finalStartDate = startDate || new Date();
+      endDate = calculateEndDate(finalStartDate, planType, customDurationValue, customDurationUnit);
+      nextPurchaseDate = calculateNextPurchaseDate(endDate, autoPay);
+    }
     
     // Store password directly without encryption
     let passwordEncrypted = password || null;
@@ -492,35 +520,163 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       }));
     }
     
-    // Create new subscription
-    const subscriptionResult = await db.query(`
-      INSERT INTO subscriptions (
-        service_name, category, owner_type, owner_name, login_username_phone,
-        password_encrypted, password_hint, purchased_date, start_date, amount,
-        plan_type, custom_duration_value, custom_duration_unit, end_date,
-        purchased_via, auto_pay, next_purchase_date, device_limit, devices_in_use,
-        comments, ids_using, "isSharing", created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
-      RETURNING *
-    `, [
-      serviceName, category, ownerType, ownerName, loginUsernamePhone,
-      passwordEncrypted, passwordHint, purchasedDate, finalStartDate, amount,
-      planType, customDurationValue, customDurationUnit, endDate,
-      purchasedVia, autoPay, nextPurchaseDate, deviceLimit, devicesInUse,
-      comments, idsUsing, isSharing, adminUserId
-    ]);
+    let subscription;
     
-    const subscription = subscriptionResult.rows[0];
+    if (isUpdate) {
+      // Update existing subscription
+      const updateFields = [];
+      const values = [];
+      let paramCount = 0;
+      
+      const fieldMapping = {
+        serviceName: 'service_name',
+        category: 'category',
+        ownerType: 'owner_type',
+        ownerName: 'owner_name',
+        loginUsernamePhone: 'login_username_phone',
+        passwordHint: 'password_hint',
+        purchasedDate: 'purchased_date',
+        startDate: 'start_date',
+        amount: 'amount',
+        planType: 'plan_type',
+        customDurationValue: 'custom_duration_value',
+        customDurationUnit: 'custom_duration_unit',
+        purchasedVia: 'purchased_via',
+        autoPay: 'auto_pay',
+        deviceLimit: 'device_limit',
+        devicesInUse: 'devices_in_use',
+        comments: 'comments',
+        idsUsing: 'ids_using',
+        isSharing: '"isSharing"'
+      };
+      
+      // Add fields that have values
+      for (const [key, dbField] of Object.entries(fieldMapping)) {
+        if (req.body[key] !== undefined) {
+          paramCount++;
+          updateFields.push(`${dbField} = $${paramCount}`);
+          values.push(req.body[key]);
+        }
+      }
+      
+      // Add computed fields
+      if (passwordEncrypted) {
+        paramCount++;
+        updateFields.push(`password_encrypted = $${paramCount}`);
+        values.push(passwordEncrypted);
+      }
+      
+      if (endDate) {
+        paramCount++;
+        updateFields.push(`end_date = $${paramCount}`);
+        values.push(endDate);
+      }
+      
+      if (nextPurchaseDate !== undefined) {
+        paramCount++;
+        updateFields.push(`next_purchase_date = $${paramCount}`);
+        values.push(nextPurchaseDate);
+      }
+      
+      // Add updated_at
+      updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+      
+      // Add ID for WHERE clause
+      paramCount++;
+      values.push(id);
+      
+      if (updateFields.length > 0) {
+        const updateQuery = `
+          UPDATE subscriptions 
+          SET ${updateFields.join(', ')}
+          WHERE id = $${paramCount}
+          RETURNING *
+        `;
+        
+        const result = await db.query(updateQuery, values);
+        subscription = result.rows[0];
+        
+        // Update idsUsing in separate table if provided
+        if (idsUsing !== undefined) {
+          // First delete all existing entries for this subscription
+          await db.query('DELETE FROM ids_sharing_users WHERE ids_sharing_id = $1', [id]);
+          
+          // Insert new entries if idsUsing is enabled and we have details
+          if (idsUsing && processedIdsUsing.length > 0) {
+            for (const user of processedIdsUsing) {
+              await db.query(`
+                INSERT INTO ids_sharing_users 
+                (ids_sharing_id, user_id, name, email, "isCustom")
+                VALUES ($1, $2, $3, $4, $5)
+              `, [
+                id,
+                user.userId || null,
+                user.name || null,
+                user.email || null,
+                user.isCustom || false
+              ]);
+            }
+          }
+        }
+
+        // Update sharing details if provided
+        if (isSharing !== undefined) {
+          // First delete all existing sharing entries for this subscription
+          await db.query('DELETE FROM subscription_sharing WHERE subscription_id = $1', [id]);
+          
+          // Insert new sharing entries if isSharing is true and we have details
+          if (isSharing && processedSharingDetails.length > 0) {
+            for (const sharing of processedSharingDetails) {
+              await db.query(`
+                INSERT INTO subscription_sharing 
+                (subscription_id, user_id, name, email, payment_status, payment_date)
+                VALUES ($1, $2, $3, $4, $5, $6)
+              `, [
+                id,
+                sharing.userId || null,
+                sharing.name || null,
+                sharing.email || null,
+                sharing.paymentStatus || 'not_paid',
+                sharing.paymentDate || null
+              ]);
+            }
+          }
+        }
+      }
+    } else {
+      // Create new subscription
+      const finalStartDate = startDate || new Date();
+      const subscriptionResult = await db.query(`
+        INSERT INTO subscriptions (
+          service_name, category, owner_type, owner_name, login_username_phone,
+          password_encrypted, password_hint, purchased_date, start_date, amount,
+          plan_type, custom_duration_value, custom_duration_unit, end_date,
+          purchased_via, auto_pay, next_purchase_date, device_limit, devices_in_use,
+          comments, ids_using, "isSharing", created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+        RETURNING *
+      `, [
+        serviceName, category, ownerType, ownerName, loginUsernamePhone,
+        passwordEncrypted, passwordHint, purchasedDate, finalStartDate, amount,
+        planType, customDurationValue, customDurationUnit, endDate,
+        purchasedVia, autoPay, nextPurchaseDate, deviceLimit, devicesInUse,
+        comments, idsUsing, isSharing, adminUserId
+      ]);
+      
+      subscription = subscriptionResult.rows[0];
+    }
     
-    // Insert idsUsing data into the separate table
-    if (idsUsing && processedIdsUsing.length > 0) {
+    const subscriptionId = subscription.id;
+    
+    // Insert idsUsing data into the separate table (only for new subscriptions)
+    if (!isUpdate && idsUsing && processedIdsUsing.length > 0) {
       for (const user of processedIdsUsing) {
         await db.query(`
           INSERT INTO ids_sharing_users 
           (ids_sharing_id, user_id, name, email, "isCustom")
           VALUES ($1, $2, $3, $4, $5)
         `, [
-          subscription.id,
+          subscriptionId,
           user.userId || null,
           user.name || null,
           user.email || null,
@@ -529,15 +685,15 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       }
     }
 
-    // Insert sharing details if subscription is being shared
-    if (isSharing && processedSharingDetails.length > 0) {
+    // Insert sharing details if subscription is being shared (only for new subscriptions)
+    if (!isUpdate && isSharing && processedSharingDetails.length > 0) {
       for (const sharing of processedSharingDetails) {
         await db.query(`
           INSERT INTO subscription_sharing (
             subscription_id, user_id, name, email, payment_status, payment_date
           ) VALUES ($1, $2, $3, $4, $5, $6)
         `, [
-          subscription.id,
+          subscriptionId,
           sharing.userId || null,
           sharing.name || null,
           sharing.email || null,
@@ -561,7 +717,7 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       LEFT JOIN users u ON asu.user_id = u.id
       WHERE asu.ids_sharing_id = $1
       ORDER BY asu.id
-    `, [subscription.id]);
+    `, [subscriptionId]);
     
     const formattedIdsUsing = idsUsingResult.rows.map(row => ({
       userId: row.user_id,
@@ -572,12 +728,40 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
       isCustom: row.is_custom
     }));
     
-    res.status(201).json({
-      message: 'Subscription created successfully',
+    // Get sharing details
+    const sharingResult = await db.query(`
+      SELECT 
+        ss.user_id,
+        ss.name,
+        ss.email,
+        ss.payment_status,
+        ss.payment_date,
+        u.first_name,
+        u.last_name,
+        u.email as user_email
+      FROM subscription_sharing ss
+      LEFT JOIN users u ON ss.user_id = u.id
+      WHERE ss.subscription_id = $1
+      ORDER BY ss.id
+    `, [subscriptionId]);
+    
+    const formattedSharingDetails = sharingResult.rows.map(row => ({
+      userId: row.user_id,
+      name: row.user_id 
+        ? `${row.first_name} ${row.last_name}` 
+        : row.name,
+      email: row.user_id ? row.user_email : row.email,
+      paymentStatus: row.payment_status,
+      paymentDate: row.payment_date,
+      isRegistered: !!row.user_id
+    }));
+    
+    res.status(isUpdate ? 200 : 201).json({
+      message: isUpdate ? 'Subscription updated successfully' : 'Subscription created successfully',
       subscription: {
         ...subscription,
         idsUsingDetails: formattedIdsUsing,
-        sharingDetails: processedSharingDetails
+        sharingDetails: formattedSharingDetails
       }
     });
   } catch (error) {

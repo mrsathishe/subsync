@@ -4,7 +4,9 @@
       "Bash(rg:*)",
       "Bash(mv:*)",
       "Bash(npm run build:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)"
     ],
     "deny": []
   }

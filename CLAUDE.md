@@ -37,6 +37,7 @@ The application follows a modular, feature-based architecture with:
 
 3. **State Management**
    - AuthContext for global authentication state with localStorage persistence
+   - UsersContext for admin user data with refetch functionality
    - Local component state for UI interactions
    - API state managed through direct axios calls with custom hooks
 
@@ -57,6 +58,8 @@ The application follows a modular, feature-based architecture with:
    - Consistent spacing and styling patterns (`mb-4`, `gap-2`, `gap-4`)
    - Variant-based component system (primary/secondary/danger)
    - Responsive grid layouts with proper alignment
+   - **Auth-specific components**: Specialized UI components for authentication flows (AuthCard, AuthInput, AuthButton, etc.)
+   - **Admin components**: Table management with icon buttons and tooltips for user actions
 
 ## Backend Implementation
 
@@ -107,7 +110,7 @@ node scripts/add-payment-details.js # Add payment_details table and triggers
 ```bash
 cd frontend
 npm install                    # Install dependencies
-npm run dev                   # Start Vite development server with HMR
+npm run dev                   # Start Vite development server with HMR on port 5000
 npm run build                 # Build for production
 npm run lint                  # Run ESLint for code quality
 npm run preview              # Preview production build locally
@@ -205,12 +208,31 @@ The backend implements a RESTful API with role-based access control:
 - **IDs Sharing**: Login credential sharing with custom and registered users
 - **Role-based Access**: Different data views for admin vs regular users
 
+## UI Component Patterns
+
+### Authentication Component Architecture
+- **Shared UI Library**: All auth components (login, register) use centralized `Auth*` components from `styles.jsx`
+- **Component Reusability**: `AuthCard`, `AuthInput`, `AuthButton`, `AuthErrorMessage` provide consistent styling across auth flows
+- **Optional Field Handling**: Forms intelligently exclude empty optional fields (dateOfBirth, gender) from API requests
+- **Validation Flow**: Client-side validation before submission with clear error messaging
+
+### Table Management Patterns
+- **Icon Button Actions**: Replace dropdown menus with direct icon buttons for better UX and accessibility
+- **Tooltip Integration**: Native `title` attributes provide contextual action descriptions
+- **Color-coded Actions**: Status actions (blue), role actions (purple) for visual distinction
+- **Real-time Updates**: Mutations trigger immediate table refresh via context callbacks
+
+### Data Table Configuration
+- **Config-driven Tables**: Use `adminHelpers.js` functions to generate table configurations dynamically
+- **Role-based Columns**: Admin users see action columns, regular users see filtered views
+- **Responsive Design**: Tables adapt gracefully to different screen sizes
+
 ## Development Workflow
 
 ### Development Server Configuration
-- **Backend**: Express server on port 3000
-- **Frontend**: Vite dev server on port 5173 with API proxy
-- **API Proxy**: Frontend `/api/*` requests automatically proxied to `http://localhost:3000`
+- **Backend**: Express server on port 5001 (production) / configurable via .env
+- **Frontend**: Vite dev server on port 5000 with API proxy
+- **API Proxy**: Frontend `/api/*` requests automatically proxied to backend server
 
 ### Vite Configuration
 The frontend uses Vite with:
@@ -240,12 +262,36 @@ The frontend uses Vite with:
 - **Grid Layouts**: Default to 2-column grids (`grid-cols-2`) with single column on mobile
 - **Alignment**: Use empty labels (`<Label>&nbsp;</Label>`) or proper container structure for field alignment
 - **Responsive Design**: Mobile-first approach with `md:` breakpoints for larger screens
+- **Auth Components**: Use `Auth*` prefixed components from styles.jsx for authentication pages (login, register)
+- **Icon Button Pattern**: Replace dropdowns with icon buttons + tooltips for better UX in tables
 
 ### Backend Patterns
 - **Middleware-first architecture** with security, logging, and rate limiting
 - **Route separation** by domain (auth, subscriptions, users, admin)
 - **Database abstraction** through centralized query helpers
 - **Global error handling** middleware
+
+## Data Flow and Component Communication
+
+### Context-Based Data Management
+- **UsersContext**: Provides centralized user data management for admin features with built-in refetch functionality
+- **AuthContext**: Manages global authentication state across the application
+- **Prop drilling avoided**: Use contexts for data that needs to be shared across multiple component levels
+
+### Real-time Data Updates
+- **Mutation callbacks**: API mutations trigger context refetch for immediate UI updates
+- **Optimistic updates**: UI changes immediately while API calls execute in background
+- **Error rollback**: Failed mutations revert UI state and show error messages
+
+### Component Communication Patterns
+- **Event callbacks**: Parent components pass `onDataChange` callbacks to trigger refreshes
+- **Context consumers**: Components access shared state via `useUsers()`, `useAuth()` hooks
+- **Service layer**: API calls abstracted through domain-specific service functions
+
+### Form Data Patterns
+- **Optional field handling**: Conditionally exclude empty optional fields from API requests
+- **Validation at submission**: Client-side validation before API calls
+- **Error state management**: Form-level error handling with field-specific feedback
 
 ## Security Implementation
 
@@ -277,14 +323,46 @@ Required environment variables:
 - `NODE_ENV` - Environment mode (development/production)
 - `PORT` - Server port (default 3000)
 
+## Deployment and Production
+
+The project includes comprehensive deployment infrastructure:
+
+### Production Deployment Script (`deploy.sh`)
+Automated deployment with dependency checking, health monitoring:
+```bash
+./deploy.sh                    # Full production deployment
+```
+
+Features:
+- Dependency verification (Node.js, npm, PM2)
+- Clean installation of all dependencies
+- Frontend build process
+- Database schema updates
+- PM2 process management
+- Health checks and rollback on failure
+
+### Process Management (`ecosystem.config.js`)
+PM2 configuration for production:
+- Cluster mode with automatic scaling
+- Memory limit (1GB) with auto-restart
+- Log rotation and error handling
+- Environment variable management
+
+### Web Server Configuration (`nginx.conf`)
+Nginx reverse proxy setup:
+- HTTPS redirect and SSL termination
+- Static file caching (1 year)
+- Security headers (HSTS, XSS protection)
+- Gzip compression for text assets
+
 ## Development Status
 
 - ✅ **Backend**: Fully implemented with payment tracking system
-- ✅ **Frontend**: Complete React application with enhanced sharing UI
+- ✅ **Frontend**: Complete React application with enhanced sharing UI  
 - ✅ **Database**: Production-ready schema with automated triggers
+- ✅ **Production**: Full deployment infrastructure with PM2 and Nginx
 - ⏳ **Mobile UI**: Directory structure only
 - ❌ **Testing**: No test framework currently implemented
-- ❌ **CI/CD**: No automated deployment pipeline
 
 ### Recent Enhancements
 - **Payment Tracking System**: Automatic payment_details creation via database triggers

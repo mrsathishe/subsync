@@ -12,7 +12,7 @@ import {
 
 function ManageUsers() {
   const { user } = useAuth();
-  const { usersData, loading: usersLoading } = useUsers(); // Use context instead of hook
+  const { usersData, loading: usersLoading, refetch } = useUsers(); // Add refetch from context
   const [currentPage, setCurrentPage] = useState(1);
 
   if (user?.role !== 'admin') {
@@ -44,6 +44,7 @@ function ManageUsers() {
               usersData={usersData} 
               isLoading={usersLoading}
               currentUserRole={user?.role}
+              onDataChange={refetch}
             />
             
             {!usersLoading && usersData?.users?.length > 0 && (

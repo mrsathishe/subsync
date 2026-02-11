@@ -2,103 +2,22 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import Footer from '../components/Footer';
-
-// Tailwind CSS Components
-const PageContainer = ({ children }) => (
-  <div className="min-h-screen flex flex-col justify-between bg-gray-50">
-    {children}
-  </div>
-);
-
-const MainContent = ({ children }) => (
-  <div className="flex items-center justify-center flex-1 p-6">
-    {children}
-  </div>
-);
-
-const RegisterCard = ({ children }) => (
-  <div className="bg-white p-8 rounded-lg border-2 border-brand-600 shadow-2xl shadow-brand-600/25 w-full max-w-md">
-    {children}
-  </div>
-);
-
-const Logo = ({ children }) => (
-  <h1 className="text-center text-3xl font-bold text-brand-600 mb-6">
-    {children}
-  </h1>
-);
-
-const Form = ({ children, ...props }) => (
-  <form className="flex flex-col gap-4" {...props}>
-    {children}
-  </form>
-);
-
-const InputGroup = ({ children }) => (
-  <div className="flex flex-col">
-    {children}
-  </div>
-);
-
-const InputRow = ({ children }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-    {children}
-  </div>
-);
-
-const Label = ({ children, ...props }) => (
-  <label className="text-sm font-semibold text-gray-700 mb-2" {...props}>
-    {children}
-  </label>
-);
-
-const Input = ({ ...props }) => (
-  <input 
-    className="p-3 border border-gray-300 rounded-md text-base transition-all focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 invalid:border-red-500"
-    {...props}
-  />
-);
-
-const Select = ({ children, ...props }) => (
-  <select 
-    className="p-3 border border-gray-300 rounded-md text-base transition-all bg-white focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-    {...props}
-  >
-    {children}
-  </select>
-);
-
-const Button = ({ children, disabled, ...props }) => (
-  <button 
-    className={`p-3 rounded-md text-base font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400 ${
-      disabled 
-        ? 'bg-gray-400 text-white cursor-not-allowed' 
-        : 'bg-brand-600 text-white cursor-pointer hover:bg-brand-700'
-    }`}
-    disabled={disabled}
-    {...props}
-  >
-    {children}
-  </button>
-);
-
-const ErrorMessage = ({ children }) => (
-  <div className="bg-red-50 text-red-600 p-3 rounded-md border border-red-200 text-sm mb-4">
-    {children}
-  </div>
-);
-
-const LinkContainer = ({ children }) => (
-  <div className="text-center mt-4">
-    {children}
-  </div>
-);
-
-const StyledLink = ({ children, ...props }) => (
-  <Link className="text-brand-600 no-underline text-sm hover:underline" {...props}>
-    {children}
-  </Link>
-);
+import {
+  PageContainer,
+  AuthMainContent,
+  AuthCard,
+  AuthLogo,
+  AuthForm,
+  AuthInputGroup,
+  AuthInputRow,
+  AuthLabel,
+  AuthInput,
+  AuthSelect,
+  AuthButton,
+  AuthErrorMessage,
+  AuthLinkContainer,
+  AuthStyledLink
+} from '../components/styles';
 
 function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -144,7 +63,15 @@ function RegisterPage() {
     }
 
     try {
-      const { confirmPassword, ...registrationData } = formData;
+      const { confirmPassword, dateOfBirth, gender, ...baseData } = formData;
+      
+      // Only include dateOfBirth and gender if they have values
+      const registrationData = {
+        ...baseData,
+        ...(dateOfBirth && { dateOfBirth }),
+        ...(gender && { gender })
+      };
+      
       const result = await register(registrationData);
       
       if (result.success) {
@@ -161,17 +88,17 @@ function RegisterPage() {
 
   return (
     <PageContainer>
-      <MainContent>
-        <RegisterCard>
-        <Logo>SubSync</Logo>
+      <AuthMainContent>
+        <AuthCard>
+        <AuthLogo>SubSync</AuthLogo>
         
-        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {error && <AuthErrorMessage>{error}</AuthErrorMessage>}
         
-        <Form onSubmit={handleSubmit}>
-          <InputRow>
-            <InputGroup>
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
+        <AuthForm onSubmit={handleSubmit}>
+          <AuthInputRow>
+            <AuthInputGroup>
+              <AuthLabel htmlFor="firstName">First Name</AuthLabel>
+              <AuthInput
                 id="firstName"
                 name="firstName"
                 type="text"
@@ -180,11 +107,11 @@ function RegisterPage() {
                 required
                 placeholder="First name"
               />
-            </InputGroup>
+            </AuthInputGroup>
 
-            <InputGroup>
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
+            <AuthInputGroup>
+              <AuthLabel htmlFor="lastName">Last Name</AuthLabel>
+              <AuthInput
                 id="lastName"
                 name="lastName"
                 type="text"
@@ -193,12 +120,12 @@ function RegisterPage() {
                 required
                 placeholder="Last name"
               />
-            </InputGroup>
-          </InputRow>
+            </AuthInputGroup>
+          </AuthInputRow>
 
-          <InputGroup>
-            <Label htmlFor="email">Email Address</Label>
-            <Input
+          <AuthInputGroup>
+            <AuthLabel htmlFor="email">Email Address</AuthLabel>
+            <AuthInput
               id="email"
               name="email"
               type="email"
@@ -207,11 +134,11 @@ function RegisterPage() {
               required
               placeholder="Enter your email"
             />
-          </InputGroup>
+          </AuthInputGroup>
 
-          <InputGroup>
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input
+          <AuthInputGroup>
+            <AuthLabel htmlFor="phone">Phone Number</AuthLabel>
+            <AuthInput
               id="phone"
               name="phone"
               type="tel"
@@ -220,42 +147,40 @@ function RegisterPage() {
               required
               placeholder="Enter your phone number"
             />
-          </InputGroup>
+          </AuthInputGroup>
 
-          <InputRow>
-            <InputGroup>
-              <Label htmlFor="dateOfBirth">Date of Birth</Label>
-              <Input
+          <AuthInputRow>
+            <AuthInputGroup>
+              <AuthLabel htmlFor="dateOfBirth">Date of Birth (Optional)</AuthLabel>
+              <AuthInput
                 id="dateOfBirth"
                 name="dateOfBirth"
                 type="date"
                 value={formData.dateOfBirth}
                 onChange={handleChange}
-                required
               />
-            </InputGroup>
+            </AuthInputGroup>
 
-            <InputGroup>
-              <Label htmlFor="gender">Gender</Label>
-              <Select
+            <AuthInputGroup>
+              <AuthLabel htmlFor="gender">Gender (Optional)</AuthLabel>
+              <AuthSelect
                 id="gender"
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
-                required
               >
                 <option value="">Select Gender</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
                 <option value="other">Other</option>
                 <option value="prefer_not_to_say">Prefer not to say</option>
-              </Select>
-            </InputGroup>
-          </InputRow>
+              </AuthSelect>
+            </AuthInputGroup>
+          </AuthInputRow>
 
-          <InputGroup>
-            <Label htmlFor="password">Password</Label>
-            <Input
+          <AuthInputGroup>
+            <AuthLabel htmlFor="password">Password</AuthLabel>
+            <AuthInput
               id="password"
               name="password"
               type="password"
@@ -265,11 +190,11 @@ function RegisterPage() {
               placeholder="Create a password"
               minLength={6}
             />
-          </InputGroup>
+          </AuthInputGroup>
 
-          <InputGroup>
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
+          <AuthInputGroup>
+            <AuthLabel htmlFor="confirmPassword">Confirm Password</AuthLabel>
+            <AuthInput
               id="confirmPassword"
               name="confirmPassword"
               type="password"
@@ -279,18 +204,18 @@ function RegisterPage() {
               placeholder="Confirm your password"
               minLength={6}
             />
-          </InputGroup>
+          </AuthInputGroup>
 
-          <Button type="submit" disabled={isLoading}>
+          <AuthButton type="submit" disabled={isLoading}>
             {isLoading ? 'Creating Account...' : 'Create Account'}
-          </Button>
-        </Form>
+          </AuthButton>
+        </AuthForm>
 
-        <LinkContainer>
-          Already have an account? <StyledLink to="/login">Sign in</StyledLink>
-        </LinkContainer>
-        </RegisterCard>
-      </MainContent>
+        <AuthLinkContainer>
+          Already have an account? <AuthStyledLink to="/login">Sign in</AuthStyledLink>
+        </AuthLinkContainer>
+        </AuthCard>
+      </AuthMainContent>
       <Footer />
     </PageContainer>
   );

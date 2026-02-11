@@ -9,32 +9,14 @@ import {
   StatusBadge,
   RoleBadge,
   LoadingState,
-  ActionDropdown,
-  DropdownButton,
-  DropdownMenu,
-  DropdownItem
+  ActionIconsContainer,
+  IconButton
 } from '../../pages/styles/adminUsers.styles.jsx';
 
-const UserTable = ({ usersData, isLoading, currentUserRole }) => {
-  const [openDropdowns, setOpenDropdowns] = useState({});
+const UserTable = ({ usersData, isLoading, currentUserRole, onDataChange }) => {
   const [notification, setNotification] = useState(null);
-  const tableRef = useRef(null);
   const updateUserRole = useUpdateUserRole();
   const updateUserStatus = useUpdateUserStatus();
-
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (tableRef.current && !tableRef.current.contains(event.target)) {
-        setOpenDropdowns({});
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const tableConfig = getUserTableConfig(
     (dateString) => {
@@ -52,22 +34,7 @@ const UserTable = ({ usersData, isLoading, currentUserRole }) => {
     currentUserRole
   );
 
-  const toggleDropdown = (userId) => {
-    console.log('Toggle dropdown for userId:', userId);
-    console.log('Current openDropdowns:', openDropdowns);
-    
-    setOpenDropdowns(prev => {
-      const isCurrentlyOpen = prev[userId];
-      console.log('Is currently open:', isCurrentlyOpen);
-      const newState = isCurrentlyOpen ? {} : { [userId]: true };
-      console.log('New state:', newState);
-      return newState;
-    });
-  };
-
   const handleAction = async (action, userId) => {
-    setOpenDropdowns({});
-
     try {
       switch (action) {
         case 'toggle-status':
@@ -81,6 +48,10 @@ const UserTable = ({ usersData, isLoading, currentUserRole }) => {
               content: `User status updated to ${!user.is_active ? 'Active' : 'Inactive'} successfully!`
             });
             setTimeout(() => setNotification(null), 5000);
+            // Refresh the table data
+            if (onDataChange) {
+              onDataChange();
+            }
           }
           break;
         case 'toggle-role':
@@ -95,6 +66,10 @@ const UserTable = ({ usersData, isLoading, currentUserRole }) => {
               content: `User role has been updated to ${newRole === 'admin' ? 'Administrator' : 'User'} successfully!`
             });
             setTimeout(() => setNotification(null), 5000);
+            // Refresh the table data
+            if (onDataChange) {
+              onDataChange();
+            }
           }
           break;
         default:
@@ -118,28 +93,21 @@ const UserTable = ({ usersData, isLoading, currentUserRole }) => {
     switch (column.type) {
       case 'actions':
         return (
-          <ActionDropdown>
-            <DropdownButton 
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleDropdown(value.userId);
-              }}
-            />
-            <DropdownMenu isOpen={openDropdowns[value.userId]}>
-              {value.actions.map((action, index) => (
-                <DropdownItem 
-                  key={index}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAction(action.action, value.userId);
-                  }}
-                  icon={action.icon}
-                >
-                  {action.label}
-                </DropdownItem>
-              ))}
-            </DropdownMenu>
-          </ActionDropdown>
+          <ActionIconsContainer>
+            {value.actions.map((action, index) => (
+              <IconButton
+                key={index}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAction(action.action, value.userId);
+                }}
+                title={action.label}
+                variant={action.action === 'toggle-status' ? 'status' : 'role'}
+              >
+                {action.icon}
+              </IconButton>
+            ))}
+          </ActionIconsContainer>
         );
       
       case 'badge':
@@ -187,7 +155,7 @@ const UserTable = ({ usersData, isLoading, currentUserRole }) => {
         </div>
       )}
       
-      <TableContainer ref={tableRef}>
+      <TableContainer>
       <Table>
         <thead>
           <tr>
